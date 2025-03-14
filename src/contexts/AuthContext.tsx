@@ -1,106 +1,250 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { toast } from '@/components/ui/use-toast';
 
 export type UserRole = 'student' | 'clubRepresentative' | 'admin';
 
+export interface Profile {
+  id: string;
+  username?: string;
+  full_name?: string;
+  avatar_url?: string;
+  department?: string;
+  year?: string;
+  bio?: string;
+}
+
 export interface User {
   id: string;
-  name: string;
   email: string;
   role: UserRole;
-  avatar?: string;
+  profile?: Profile;
 }
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (email: string, password: string, name: string, role: UserRole) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
   isLoading: true,
   login: async () => {},
-  logout: () => {},
+  logout: async () => {},
   register: async () => {},
+  refreshUser: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-const STORAGE_KEY = 'cluby_auth_user';
-
-// Mock user data for demo purposes
-const MOCK_USERS: User[] = [
-  { id: '1', name: 'Student User', email: 'student@example.com', role: 'student' },
-  { id: '2', name: 'Club Rep', email: 'clubrep@example.com', role: 'clubRepresentative' },
-  { id: '3', name: 'Admin User', email: 'admin@example.com', role: 'admin' },
-];
-
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for saved user on mount
-    const savedUser = localStorage.getItem(STORAGE_KEY);
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  // Function to fetch user profile and set user state
+  const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
+    try {
+      // Default role (can be refined with a better role system)
+      let role: UserRole = 'student';
+      
+      // Check if user is a club representative
+      const { data: clubRep } = await supabase
+        .from('clubs')
+        .select('representative_id')
+        .eq('representative_id', supabaseUser.id)
+        .single();
+      
+      if (clubRep) {
+        role = 'clubRepresentative';
+      }
+      
+      // For demo purposes, hardcoded admin email check
+      // In production, you'd want a proper role system
+      if (supabaseUser.email?.includes('admin')) {
+        role = 'admin';
+      }
+      
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+      
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        role,
+        profile: profile || undefined
+      };
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
     }
-    setIsLoading(false);
+  };
+
+  // Refresh user data
+  const refreshUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const userData = await fetchUserProfile(session.user);
+        setUser(userData);
+        setSession(session);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+  };
+
+  // Initial session check
+  useEffect(() => {
+    setIsLoading(true);
+    
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      
+      if (session?.user) {
+        const userData = await fetchUserProfile(session.user);
+        setUser(userData);
+      }
+      
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      
+      if (session?.user) {
+        const userData = await fetchUserProfile(session.user);
+        setUser(userData);
+      } else {
+        setUser(null);
+      }
+      
+      setIsLoading(false);
+    });
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
+  // Login function
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // Find user in mock data (in a real app, this would be an API call)
-      const foundUser = MOCK_USERS.find(u => u.email === email);
+      if (error) throw error;
       
-      if (!foundUser) {
-        throw new Error('Invalid credentials');
+      if (data.user) {
+        const userData = await fetchUserProfile(data.user);
+        setUser(userData);
+        setSession(data.session);
+        toast({
+          title: "Login successful",
+          description: `Welcome back${userData?.profile?.full_name ? ', ' + userData.profile.full_name : ''}!`,
+        });
       }
-      
-      // Save to local storage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(foundUser));
-      setUser(foundUser);
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setUser(null);
+  // Logout function
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Logout failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const register = async (name: string, email: string, password: string, role: UserRole) => {
+  // Register function
+  const register = async (email: string, password: string, name: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real app, this would create a user in the database
-      const newUser: User = {
-        id: `user_${Date.now()}`,
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        role,
-      };
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role: role,
+          },
+        },
+      });
       
-      // Save to local storage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-      setUser(newUser);
+      if (error) throw error;
+      
+      toast({
+        title: "Registration successful",
+        description: "Welcome to Cluby! Your account has been created.",
+      });
+      
+      if (data.user) {
+        // Profile is created by the database trigger
+        const userData = await fetchUserProfile(data.user);
+        setUser(userData);
+        setSession(data.session);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        session,
+        isLoading, 
+        login, 
+        logout, 
+        register,
+        refreshUser
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
