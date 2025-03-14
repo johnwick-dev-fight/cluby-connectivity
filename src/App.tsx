@@ -12,8 +12,12 @@ import Clubs from "@/pages/Clubs";
 import ClubDetail from "@/pages/ClubDetail";
 import Community from "@/pages/Community";
 import Recruitment from "@/pages/Recruitment";
+import CreateRecruitment from "@/pages/CreateRecruitment";
+import Settings from "@/pages/Settings";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
+import ClubApprovals from "@/pages/admin/ClubApprovals";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +39,12 @@ const App = () => (
               <Route path="clubs/:id" element={<ClubDetail />} />
               <Route path="community" element={<Community />} />
               <Route path="recruit" element={<Recruitment />} />
+              <Route path="recruit/create" element={<CreateRecruitment />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+              
+              {/* Admin routes */}
+              <Route path="admin/club-approvals" element={<ClubApprovals />} />
             </Route>
             
             {/* Catch-all route */}

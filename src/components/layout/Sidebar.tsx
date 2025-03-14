@@ -11,7 +11,9 @@ import {
   Calendar, 
   BarChart3, 
   Settings,
-  PlusCircle
+  PlusCircle,
+  UserCircle,
+  Shield
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -44,7 +46,7 @@ const Sidebar: React.FC = () => {
   const navItems = [
     { to: "/dashboard", icon: <Home size={18} />, label: "Dashboard", roles: ['student', 'clubRepresentative', 'admin'] },
     { to: "/clubs", icon: <Users size={18} />, label: "Clubs", roles: ['student', 'clubRepresentative', 'admin'] },
-    { to: "/recruit", icon: <Briefcase size={18} />, label: "Recruit", roles: ['student', 'clubRepresentative', 'admin'] },
+    { to: "/recruit", icon: <Briefcase size={18} />, label: "Recruitment", roles: ['student', 'clubRepresentative', 'admin'] },
     { to: "/community", icon: <MessageSquare size={18} />, label: "Community", roles: ['student', 'clubRepresentative', 'admin'] },
     { to: "/events", icon: <Calendar size={18} />, label: "Events", roles: ['student', 'clubRepresentative', 'admin'] },
   ];
@@ -52,16 +54,19 @@ const Sidebar: React.FC = () => {
   // Admin-specific items
   const adminItems = [
     { to: "/admin/dashboard", icon: <BarChart3 size={18} />, label: "Admin Panel", roles: ['admin'] },
-    { to: "/admin/clubs", icon: <Users size={18} />, label: "Manage Clubs", roles: ['admin'] },
+    { to: "/admin/club-approvals", icon: <Shield size={18} />, label: "Club Approvals", roles: ['admin'] },
+    { to: "/admin/users", icon: <Users size={18} />, label: "Manage Users", roles: ['admin'] },
   ];
   
   // Club representative specific items
   const clubRepItems = [
     { to: "/club-management", icon: <PlusCircle size={18} />, label: "My Club", roles: ['clubRepresentative'] },
+    { to: "/recruit/create", icon: <Briefcase size={18} />, label: "Post Position", roles: ['clubRepresentative'] },
   ];
   
   // Common items at the bottom
   const bottomItems = [
+    { to: "/profile", icon: <UserCircle size={18} />, label: "Profile", roles: ['student', 'clubRepresentative', 'admin'] },
     { to: "/settings", icon: <Settings size={18} />, label: "Settings", roles: ['student', 'clubRepresentative', 'admin'] },
   ];
   
