@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Clubs from "@/pages/Clubs";
 import ClubDetail from "@/pages/ClubDetail";
 import Community from "@/pages/Community";
+import Recruitment from "@/pages/Recruitment";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="clubs" element={<Clubs />} />
               <Route path="clubs/:id" element={<ClubDetail />} />
               <Route path="community" element={<Community />} />
+              <Route path="recruit" element={<Recruitment />} />
             </Route>
             
             {/* Catch-all route */}
