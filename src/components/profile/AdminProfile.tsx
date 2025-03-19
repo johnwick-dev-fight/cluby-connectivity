@@ -11,7 +11,7 @@ const AdminProfile = () => {
   
   // Mock admin data
   const adminData = {
-    name: user?.name || 'Admin User',
+    name: user?.profile?.full_name || 'Admin User',
     email: user?.email || 'admin@example.com',
     position: 'Platform Administrator',
     stats: {
@@ -29,7 +29,7 @@ const AdminProfile = () => {
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user?.avatar} alt={adminData.name} />
+                <AvatarImage src={user?.profile?.avatar_url} alt={adminData.name} />
                 <AvatarFallback className="text-lg">{adminData.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>

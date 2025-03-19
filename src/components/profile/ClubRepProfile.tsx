@@ -11,7 +11,7 @@ const ClubRepProfile = () => {
   
   // Mock club representative data
   const repData = {
-    name: user?.name || 'Club Representative',
+    name: user?.profile?.full_name || 'Club Representative',
     email: user?.email || 'clubrep@example.com',
     position: 'President',
     club: {
@@ -32,7 +32,7 @@ const ClubRepProfile = () => {
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user?.avatar} alt={repData.name} />
+                <AvatarImage src={user?.profile?.avatar_url} alt={repData.name} />
                 <AvatarFallback className="text-lg">{repData.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
