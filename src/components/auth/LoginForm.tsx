@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, LogIn, Facebook, Github, Google, Twitter, Loader2, ArrowRight } from 'lucide-react';
+import { Mail, Lock, LogIn, Facebook, Github, Twitter, Loader2, ArrowRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
@@ -57,7 +56,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
     }
   };
   
-  // Quick login buttons for demo
   const handleQuickLogin = async (demoEmail: string) => {
     setEmail(demoEmail);
     setPassword('password'); // In a real app, you'd never do this
@@ -78,7 +76,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
     }
   };
 
-  // Simulated social login
   const handleSocialLogin = (provider: string) => {
     toast({
       title: "Social Login",
@@ -178,7 +175,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
               onClick={() => handleSocialLogin('Google')}
               className="dark:border-gray-700 dark:hover:bg-gray-700"
             >
-              <Google className="h-4 w-4" />
+              <Mail className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
