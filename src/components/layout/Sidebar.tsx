@@ -11,11 +11,19 @@ import {
   Settings, 
   UserCircle, 
   Calendar,
-  ShieldAlert 
+  ShieldAlert,
+  Bell,
+  HelpCircle,
+  FileText,
+  Heart,
+  Award
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Sidebar: React.FC = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   
   const navItems = [
     { 
@@ -63,9 +71,38 @@ const Sidebar: React.FC = () => {
       icon: <ShieldAlert size={20} /> 
     }
   ];
+
+  // Additional non-working buttons
+  const additionalFeatures = [
+    {
+      name: 'Notifications',
+      icon: <Bell size={18} />,
+      variant: 'ghost' as const
+    },
+    {
+      name: 'Help Center',
+      icon: <HelpCircle size={18} />,
+      variant: 'ghost' as const
+    },
+    {
+      name: 'Documentation',
+      icon: <FileText size={18} />,
+      variant: 'ghost' as const
+    },
+    {
+      name: 'Favorites',
+      icon: <Heart size={18} />,
+      variant: 'ghost' as const
+    },
+    {
+      name: 'Achievements',
+      icon: <Award size={18} />,
+      variant: 'cluby' as const
+    }
+  ];
   
   return (
-    <aside className="w-64 hidden md:block border-r dark:border-gray-800 h-[calc(100vh-4rem)] overflow-y-auto bg-white dark:bg-gray-900">
+    <aside className="w-64 hidden md:block border-r border-gray-200 dark:border-gray-800 h-[calc(100vh-4rem)] overflow-y-auto bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="py-4 px-3">
         <nav className="space-y-1">
           {navItems.map((item) => (
@@ -73,10 +110,10 @@ const Sidebar: React.FC = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) => cn(
-                "flex items-center px-4 py-3 text-sm font-medium rounded-md",
+                "flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors duration-200",
                 isActive
                   ? "bg-cluby-50 text-cluby-600 dark:bg-gray-800 dark:text-cluby-400"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
               )}
             >
               <span className="mr-3">{item.icon}</span>
@@ -97,10 +134,10 @@ const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) => cn(
-                    "flex items-center px-4 py-3 text-sm font-medium rounded-md",
+                    "flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors duration-200",
                     isActive
                       ? "bg-cluby-50 text-cluby-600 dark:bg-gray-800 dark:text-cluby-400"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                   )}
                 >
                   <span className="mr-3">{item.icon}</span>
@@ -109,6 +146,26 @@ const Sidebar: React.FC = () => {
               ))}
             </>
           )}
+
+          <div className="pt-5 pb-2">
+            <p className="px-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Additional Features
+            </p>
+          </div>
+          
+          <div className="space-y-2 px-3">
+            {additionalFeatures.map((feature, index) => (
+              <Button 
+                key={index}
+                variant={feature.variant}
+                className="w-full justify-start text-left"
+                onClick={() => {}}
+              >
+                <span className="mr-2">{feature.icon}</span>
+                {feature.name}
+              </Button>
+            ))}
+          </div>
         </nav>
       </div>
     </aside>
