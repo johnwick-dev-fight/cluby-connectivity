@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu,
@@ -11,12 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   
   const getInitials = (name: string) => {
     return name
@@ -27,10 +29,10 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="border-b bg-white dark:bg-gray-900">
+    <nav className="border-b bg-white dark:bg-gray-900 dark:border-gray-800">
       <div className="cluby-container flex justify-between items-center py-3">
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-2xl font-bold text-cluby-600">
+          <Link to="/" className="text-2xl font-bold text-cluby-600 dark:text-cluby-400">
             Cluby
           </Link>
           
@@ -39,13 +41,22 @@ const Navbar: React.FC = () => {
             <Input 
               type="search" 
               placeholder="Search clubs, events..." 
-              className="pl-8 w-full"
+              className="pl-8 w-full dark:bg-gray-800 dark:border-gray-700"
             />
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="relative">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleTheme} 
+            className="text-gray-700 dark:text-gray-200"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </Button>
+          
+          <Button variant="ghost" size="icon" className="relative text-gray-700 dark:text-gray-200">
             <Bell size={20} />
             <span className="absolute -top-1 -right-1 bg-cluby-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
               3

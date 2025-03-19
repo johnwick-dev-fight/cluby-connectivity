@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import MainLayout from "@/components/layout/MainLayout";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -13,6 +14,7 @@ import ClubDetail from "@/pages/ClubDetail";
 import Community from "@/pages/Community";
 import Recruitment from "@/pages/Recruitment";
 import CreateRecruitment from "@/pages/CreateRecruitment";
+import Events from "@/pages/Events";
 import Settings from "@/pages/Settings";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
@@ -50,46 +52,49 @@ const ProtectedRoute = ({ children, allowedRoles = [] }: { children: React.React
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Protected routes inside MainLayout */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="clubs" element={<Clubs />} />
-              <Route path="clubs/:id" element={<ClubDetail />} />
-              <Route path="community" element={<Community />} />
-              <Route path="recruit" element={<Recruitment />} />
-              <Route path="recruit/create" element={
-                <ProtectedRoute allowedRoles={['clubRepresentative', 'admin']}>
-                  <CreateRecruitment />
-                </ProtectedRoute>
-              } />
-              <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
               
-              {/* Admin routes */}
-              <Route path="admin/club-approvals" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <ClubApprovals />
+              {/* Protected routes inside MainLayout */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <MainLayout />
                 </ProtectedRoute>
-              } />
-            </Route>
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              }>
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="clubs" element={<Clubs />} />
+                <Route path="clubs/:id" element={<ClubDetail />} />
+                <Route path="community" element={<Community />} />
+                <Route path="events" element={<Events />} />
+                <Route path="recruit" element={<Recruitment />} />
+                <Route path="recruit/create" element={
+                  <ProtectedRoute allowedRoles={['clubRepresentative', 'admin']}>
+                    <CreateRecruitment />
+                  </ProtectedRoute>
+                } />
+                <Route path="profile" element={<Profile />} />
+                <Route path="settings" element={<Settings />} />
+                
+                {/* Admin routes */}
+                <Route path="admin/club-approvals" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <ClubApprovals />
+                  </ProtectedRoute>
+                } />
+              </Route>
+              
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
