@@ -20,6 +20,10 @@ import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 import ClubApprovals from "@/pages/admin/ClubApprovals";
+import UserManagement from "@/pages/admin/UserManagement";
+import EventManagement from "@/pages/admin/EventManagement";
+import CommunityManagement from "@/pages/admin/CommunityManagement";
+import AdminOverview from "@/pages/admin/Overview";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -85,6 +89,26 @@ const App = () => (
                 <Route path="admin/club-approvals" element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <ClubApprovals />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/overview" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminOverview />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/users" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <UserManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/events" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <EventManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/community" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <CommunityManagement />
                   </ProtectedRoute>
                 } />
               </Route>

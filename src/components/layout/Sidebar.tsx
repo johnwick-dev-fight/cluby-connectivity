@@ -18,7 +18,10 @@ import {
   Heart,
   Award,
   ClipboardList,
-  UserPlus
+  UserPlus,
+  BarChart3,
+  AlertTriangle,
+  Megaphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -92,9 +95,9 @@ const Sidebar: React.FC = () => {
   // Admin-only navigation items
   const adminNavItems = [
     { 
-      name: 'Club Approvals', 
-      path: '/admin/club-approvals', 
-      icon: <ShieldAlert size={20} /> 
+      name: 'Platform Overview', 
+      path: '/admin/overview', 
+      icon: <BarChart3 size={20} /> 
     },
     { 
       name: 'User Management', 
@@ -102,9 +105,19 @@ const Sidebar: React.FC = () => {
       icon: <Users size={20} /> 
     },
     { 
-      name: 'Platform Overview', 
-      path: '/admin/overview', 
-      icon: <LayoutDashboard size={20} /> 
+      name: 'Club Approvals', 
+      path: '/admin/club-approvals', 
+      icon: <Award size={20} /> 
+    },
+    { 
+      name: 'Event Management', 
+      path: '/admin/events', 
+      icon: <Calendar size={20} /> 
+    },
+    { 
+      name: 'Community Moderation', 
+      path: '/admin/community', 
+      icon: <Megaphone size={20} /> 
     }
   ];
 
