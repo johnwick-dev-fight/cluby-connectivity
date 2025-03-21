@@ -38,7 +38,7 @@ interface Post {
   profile?: {
     full_name: string;
     avatar_url: string | null;
-  };
+  } | null; // Make profile optional to handle the case when it's not found
 }
 
 const CommunityManagement = () => {
@@ -53,13 +53,28 @@ const CommunityManagement = () => {
         .from('posts')
         .select(`
           *,
-          club:club_id(name, logo_url),
-          profile:author_id(full_name, avatar_url)
+          club:club_id(name, logo_url)
         `)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
-      return data as Post[];
+      
+      // For each post, fetch the author's profile separately
+      // since there's an issue with the direct relation
+      const postsWithProfiles = await Promise.all(data.map(async (post) => {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', post.author_id)
+          .single();
+          
+        return {
+          ...post,
+          profile: profileError ? null : profileData
+        };
+      }));
+      
+      return postsWithProfiles as Post[];
     },
   });
 
@@ -214,9 +229,13 @@ const CommunityManagement = () => {
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
                                 <AvatarImage src={post.profile?.avatar_url || ''} alt={post.profile?.full_name} />
-                                <AvatarFallback>{post.profile?.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                <AvatarFallback>
+                                  {post.profile?.full_name 
+                                    ? post.profile.full_name.substring(0, 2).toUpperCase() 
+                                    : 'UN'}
+                                </AvatarFallback>
                               </Avatar>
-                              <span>{post.profile?.full_name}</span>
+                              <span>{post.profile?.full_name || 'Unknown'}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -228,11 +247,12 @@ const CommunityManagement = () => {
                                 <Badge 
                                   variant={
                                     post.ui_status === 'approved' 
-                                      ? 'success' 
+                                      ? 'default' 
                                       : post.ui_status === 'rejected' 
                                         ? 'destructive' 
                                         : 'outline'
                                   }
+                                  className={post.ui_status === 'approved' ? "bg-green-600 hover:bg-green-700" : ""}
                                 >
                                   {post.ui_status.charAt(0).toUpperCase() + post.ui_status.slice(1)}
                                 </Badge>

@@ -56,7 +56,7 @@ interface Event {
   created_at: string;
   updated_at: string;
   club?: Club;
-  profile?: Profile;
+  profile?: Profile | null; // Make profile optional or null
   ui_status?: 'pending' | 'approved' | 'rejected'; // UI only field
 }
 
@@ -72,18 +72,27 @@ const EventManagement = () => {
         .from('events')
         .select(`
           *,
-          club:club_id(*),
-          profile:created_by(full_name, avatar_url)
+          club:club_id(*)
         `)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
 
-      // Ensure profile has full_name
-      return data.map(event => ({
-        ...event,
-        profile: event.profile || { full_name: 'Unknown', avatar_url: null }
-      })) as Event[];
+      // For each event, fetch the creator's profile separately
+      const eventsWithProfiles = await Promise.all(data.map(async (event) => {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', event.created_by)
+          .single();
+          
+        return {
+          ...event,
+          profile: profileError ? null : profileData
+        };
+      }));
+
+      return eventsWithProfiles as Event[];
     },
   });
 
@@ -250,9 +259,13 @@ const EventManagement = () => {
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
                                 <AvatarImage src={event.profile?.avatar_url || ''} alt={event.profile?.full_name} />
-                                <AvatarFallback>{event.profile?.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                <AvatarFallback>
+                                  {event.profile?.full_name 
+                                    ? event.profile.full_name.substring(0, 2).toUpperCase() 
+                                    : 'UN'}
+                                </AvatarFallback>
                               </Avatar>
-                              <span>{event.profile?.full_name}</span>
+                              <span>{event.profile?.full_name || 'Unknown'}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -261,11 +274,12 @@ const EventManagement = () => {
                                 <Badge 
                                   variant={
                                     event.ui_status === 'approved' 
-                                      ? 'success' 
+                                      ? 'default' 
                                       : event.ui_status === 'rejected' 
                                         ? 'destructive' 
                                         : 'outline'
                                   }
+                                  className={event.ui_status === 'approved' ? "bg-green-600 hover:bg-green-700" : ""}
                                 >
                                   {event.ui_status.charAt(0).toUpperCase() + event.ui_status.slice(1)}
                                 </Badge>

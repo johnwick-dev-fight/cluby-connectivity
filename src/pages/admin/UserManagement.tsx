@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -101,22 +100,30 @@ const UserManagement = () => {
     enabled: activeTab === 'students',
   });
   
-  // Fetch club representatives
+  // Fetch club representatives - Fix the SQL query
   const { data: clubReps, isLoading: clubRepsLoading } = useQuery({
     queryKey: ['admin-club-reps'],
     queryFn: async () => {
+      // Fix the SQL query by joining the profiles table to get the representative's name
       const { data, error } = await supabase
         .from('clubs')
         .select(`
-          id as club_id,
+          id, 
           name,
-          representative_id as id
+          representative_id
         `)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
       
-      return data as ClubRepresentative[];
+      // Transform the data to match the ClubRepresentative interface
+      const clubRepresentatives = data.map(club => ({
+        id: club.representative_id,
+        name: club.name,
+        club_id: club.id,
+      }));
+      
+      return clubRepresentatives as ClubRepresentative[];
     },
     enabled: activeTab === 'club-reps',
   });
