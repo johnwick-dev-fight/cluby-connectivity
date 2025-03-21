@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
 
 interface LoginFormProps {
   onRegisterClick: () => void;
@@ -16,6 +16,7 @@ interface LoginFormProps {
 const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login } = useAuth();
@@ -54,6 +55,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
     }
   };
   
+  const toggleShowPassword = () => setShowPassword(!showPassword);
+  
   return (
     <Card className="w-full shadow-lg border-gray-200 dark:border-gray-700 dark:bg-gray-800">
       <CardHeader className="space-y-1">
@@ -87,12 +90,21 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
               <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-9 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="pl-9 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                onClick={toggleShowPassword}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Button>
             </div>
           </div>
           <Button type="submit" className="w-full group" disabled={isSubmitting}>

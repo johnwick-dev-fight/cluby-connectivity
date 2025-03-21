@@ -15,12 +15,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Check if theme is stored in localStorage
     const savedTheme = localStorage.getItem('theme') as Theme;
     
-    // Check user's system preference if no stored theme
+    // Always default to light mode if no stored theme
     if (!savedTheme) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      return 'light';
     }
     
-    return savedTheme || 'light';
+    return savedTheme;
   });
 
   useEffect(() => {

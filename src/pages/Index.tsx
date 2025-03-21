@@ -1,16 +1,43 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Users, Briefcase, Calendar, MessageSquare, Search, ArrowDownCircle } from 'lucide-react';
+import ThemeSwitcher from '@/components/ThemeSwitcher';
 
 const Index = () => {
   const { user } = useAuth();
   
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Navbar with theme switcher */}
+      <nav className="py-4 px-6 bg-white/80 backdrop-blur-sm dark:bg-gray-900/80 sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <span className="text-2xl font-bold text-cluby-600 dark:text-cluby-400">Cluby</span>
+          
+          <div className="flex items-center gap-4">
+            <ThemeSwitcher variant="switch" />
+            
+            {!user && (
+              <Link to="/auth">
+                <Button size="sm" variant="outline">
+                  Sign In
+                </Button>
+              </Link>
+            )}
+            
+            {user && (
+              <Link to="/dashboard">
+                <Button size="sm">
+                  Dashboard
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </nav>
+      
       {/* Hero section with improved design */}
       <div className="relative bg-gradient-to-br from-cluby-700 to-cluby-900 text-white overflow-hidden">
         {/* Background pattern */}
@@ -18,7 +45,7 @@ const Index = () => {
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#ffffff33_1px,transparent_1px)] bg-[size:20px_20px]"></div>
         </div>
         
-        <div className="cluby-container relative py-24 md:py-36 flex flex-col items-center text-center z-10">
+        <div className="max-w-7xl mx-auto px-6 relative py-24 md:py-36 flex flex-col items-center text-center z-10">
           <Badge variant="outline" className="mb-4 py-1 px-4 text-sm bg-white/10 border-white/20 backdrop-blur-sm">
             Campus Connection Hub
           </Badge>
@@ -60,7 +87,7 @@ const Index = () => {
         {/* Wave divider */}
         <div className="absolute bottom-0 left-0 w-full">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-auto">
-            <path fill="#ffffff" fillOpacity="1" d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"></path>
+            <path fill="currentColor" fillOpacity="1" d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z" className="text-white dark:text-gray-900"></path>
           </svg>
         </div>
       </div>
@@ -213,11 +240,12 @@ const Index = () => {
       
       {/* Footer */}
       <footer className="bg-gray-100 dark:bg-gray-800 py-12 mt-auto">
-        <div className="cluby-container">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <h3 className="text-lg font-bold mb-4 dark:text-white">Cluby</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">Your campus connection hub for clubs, events, and opportunities.</p>
+              <ThemeSwitcher variant="full" />
             </div>
             
             <div>
@@ -259,3 +287,4 @@ const Index = () => {
 };
 
 export default Index;
+

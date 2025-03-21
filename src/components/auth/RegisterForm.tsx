@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Mail, Lock } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface RegisterFormProps {
   onLoginClick: () => void;
@@ -21,6 +21,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('student');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -69,15 +71,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
   };
   
   return (
-    <Card className="w-full shadow-lg border-gray-200">
+    <Card className="w-full shadow-lg border-gray-200 dark:border-gray-700 dark:bg-gray-800">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-        <CardDescription>Enter your information to create your account</CardDescription>
+        <CardTitle className="text-2xl font-bold dark:text-white">Create an account</CardTitle>
+        <CardDescription className="dark:text-gray-400">Enter your information to create your account</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="name" className="dark:text-gray-300">Full Name</Label>
             <div className="relative">
               <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -86,13 +88,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="pl-9"
+                className="pl-9 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="dark:text-gray-300">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -101,45 +103,63 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-9"
+                className="pl-9 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="dark:text-gray-300">Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-9"
+                className="pl-9 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Button>
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Label htmlFor="confirmPassword" className="dark:text-gray-300">Confirm Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 id="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-9"
+                className="pl-9 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Button>
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="role" className="dark:text-gray-300">Role</Label>
             <Select defaultValue={role} onValueChange={(value) => setRole(value as UserRole)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 <SelectValue placeholder="Select your role" />
               </SelectTrigger>
               <SelectContent>
@@ -147,7 +167,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
                 <SelectItem value="clubRepresentative">Club Representative</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground dark:text-gray-400">
               Select "Club Representative" if you're registering on behalf of a club
             </p>
           </div>
@@ -158,7 +178,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">
-        <Button variant="link" onClick={onLoginClick}>
+        <Button variant="link" onClick={onLoginClick} className="dark:text-gray-300">
           Already have an account? Sign in
         </Button>
       </CardFooter>
