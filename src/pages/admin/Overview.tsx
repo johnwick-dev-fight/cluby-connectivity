@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { ChevronUp, Users, CalendarCheck, Briefcase, MessageSquare, ShieldAlert, Award, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 // Stats cards for different metrics
@@ -50,21 +49,14 @@ const AdminOverview = () => {
     queryKey: ['admin-stats'],
     queryFn: async () => {
       // Fetch counts from various tables
-      const [
-        clubsResult,
-        usersResult,
-        eventsResult,
-        positionsResult,
-        pendingClubsResult,
-        postsResult,
-      ] = await Promise.all([
-        supabase.from('clubs').select('id', { count: 'exact', head: true }),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('events').select('id', { count: 'exact', head: true }),
-        supabase.from('recruitment_positions').select('id', { count: 'exact', head: true }),
-        supabase.from('clubs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('posts').select('id', { count: 'exact', head: true }),
-      ]);
+      const clubsResult = await supabase.from('clubs').select('*', { count: 'exact', head: true });
+      const usersResult = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+      const eventsResult = await supabase.from('events').select('*', { count: 'exact', head: true });
+      const positionsResult = await supabase.from('recruitment_positions').select('*', { count: 'exact', head: true });
+      const pendingClubsResult = await supabase.from('clubs')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      const postsResult = await supabase.from('posts').select('*', { count: 'exact', head: true });
 
       const clubsCount = clubsResult.count || 0;
       const usersCount = usersResult.count || 0;

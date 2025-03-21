@@ -1,50 +1,70 @@
+
 import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { CheckCircle, XCircle, Calendar, MapPin, Clock, Search, Filter, Loader2, AlertTriangle, Eye } from 'lucide-react';
-import { format } from 'date-fns';
+import { 
+  Check, 
+  X, 
+  AlertTriangle, 
+  ChevronDown, 
+  ChevronUp, 
+  Loader2,
+  Calendar,
+  MapPin,
+  Clock
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { format, parseISO } from 'date-fns';
+import { 
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
-// Type for Event data
+// Define interfaces with exact properties from database
+interface Profile {
+  full_name: string;
+  avatar_url: string | null;
+}
+
+interface Club {
+  id: string;
+  name: string;
+  logo_url: string | null;
+}
+
 interface Event {
   id: string;
   title: string;
-  description: string | null;
-  event_type: string | null;
-  location: string | null;
-  image_url: string | null;
-  start_time: string;
-  end_time: string | null;
-  created_at: string;
+  description: string;
   club_id: string;
   created_by: string;
-  // Custom fields for UI state, not in the Supabase table
-  ui_status?: string;
-  admin_notes?: string;
-  club?: {
-    name: string;
-  };
-  profile?: {
-    full_name: string;
-  };
+  event_type: string;
+  location: string;
+  start_time: string;
+  end_time: string;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+  club?: Club;
+  profile?: Profile;
+  ui_status?: 'pending' | 'approved' | 'rejected'; // UI only field
 }
 
 const EventManagement = () => {
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [isReviewOpen, setIsReviewOpen] = useState(false);
-  const [declineReason, setDeclineReason] = useState('');
-
-  // Query to fetch events with club data
+  const [expandedEvents, setExpandedEvents] = useState<Record<string, boolean>>({});
+  
+  // Fetch events
   const { data: events, isLoading } = useQuery({
     queryKey: ['admin-events'],
     queryFn: async () => {
@@ -52,424 +72,303 @@ const EventManagement = () => {
         .from('events')
         .select(`
           *,
-          club:club_id(name),
-          profile:created_by(full_name)
+          club:club_id(*),
+          profile:created_by(full_name, avatar_url)
         `)
         .order('created_at', { ascending: false });
+        
+      if (error) throw error;
 
-      if (error) {
-        toast({
-          title: "Error fetching events",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
-      }
-
-      // Cast to known safe shape and add ui_status for demonstration
-      const safeData = data.map((event: any) => ({
+      // Ensure profile has full_name
+      return data.map(event => ({
         ...event,
-        // Add UI status since we don't have it in the database yet
-        ui_status: Math.random() > 0.3 ? 'approved' : (Math.random() > 0.5 ? 'pending' : 'declined'),
-        profile: {
-          full_name: event.profile?.full_name || 'Unknown User'
-        }
-      }));
-
-      return safeData as Event[];
+        profile: event.profile || { full_name: 'Unknown', avatar_url: null }
+      })) as Event[];
     },
   });
 
-  // Mutation to approve an event
-  const approveEventMutation = useMutation({
-    mutationFn: async (eventId: string) => {
-      // In a real app, you would update a status field in the events table
-      console.log("Approving event:", eventId);
-      // Simulated API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return eventId;
+  // Mutation for approving/rejecting events (simulated for UI)
+  const updateEventMutation = useMutation({
+    mutationFn: async ({ id, ui_status }: { id: string; ui_status: 'approved' | 'rejected' }) => {
+      // In a real application with a status column:
+      // const { error } = await supabase
+      //   .from('events')
+      //   .update({ status: status })
+      //   .eq('id', id);
+      // if (error) throw error;
+      
+      // Simulate for UI only
+      return { id, ui_status };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-events'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['admin-events'], (oldData: Event[] | undefined) => 
+        oldData?.map(event => 
+          event.id === data.id 
+            ? { ...event, ui_status: data.ui_status } 
+            : event
+        )
+      );
+      
       toast({
-        title: "Event approved",
-        description: "The event has been successfully approved.",
+        title: `Event ${data.ui_status}`,
+        description: `The event has been ${data.ui_status} successfully.`,
       });
-      setIsReviewOpen(false);
     },
     onError: (error) => {
       toast({
-        title: "Failed to approve event",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        title: "Action failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     },
   });
 
-  // Mutation to decline an event
-  const declineEventMutation = useMutation({
-    mutationFn: async (eventId: string) => {
-      // In a real app, you would update a status field in the events table
-      console.log("Declining event:", eventId, "Reason:", declineReason);
-      // Simulated API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return eventId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-events'] });
-      toast({
-        title: "Event declined",
-        description: "The event has been declined.",
-      });
-      setDeclineReason('');
-      setIsReviewOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to decline event",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation to delete an event
+  // Delete event mutation
   const deleteEventMutation = useMutation({
-    mutationFn: async (eventId: string) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('events')
         .delete()
-        .eq('id', eventId);
-      
+        .eq('id', id);
+        
       if (error) throw error;
-      return eventId;
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-events'] });
+    onSuccess: (id) => {
+      queryClient.setQueryData(['admin-events'], (oldData: Event[] | undefined) => 
+        oldData?.filter(event => event.id !== id)
+      );
+      
       toast({
         title: "Event deleted",
         description: "The event has been permanently deleted.",
       });
-      setIsReviewOpen(false);
     },
     onError: (error) => {
       toast({
-        title: "Failed to delete event",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     },
   });
 
-  // Filter events based on search and active tab
-  const filteredEvents = events?.filter(event => {
-    const matchesSearch = 
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (event.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-      (event.club?.name.toLowerCase().includes(searchQuery.toLowerCase()) || false);
-    
-    if (activeTab === 'all') return matchesSearch;
-    if (activeTab === 'pending') return matchesSearch && event.ui_status === 'pending';
-    if (activeTab === 'approved') return matchesSearch && event.ui_status === 'approved';
-    if (activeTab === 'declined') return matchesSearch && event.ui_status === 'declined';
-    
-    return matchesSearch;
-  });
-
-  const handleReviewEvent = (event: Event) => {
-    setSelectedEvent(event);
-    setIsReviewOpen(true);
+  const toggleEventExpansion = (eventId: string) => {
+    setExpandedEvents(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
   };
 
-  const handleApproveEvent = () => {
-    if (selectedEvent) {
-      approveEventMutation.mutate(selectedEvent.id);
-    }
-  };
-
-  const handleDeclineEvent = () => {
-    if (selectedEvent) {
-      declineEventMutation.mutate(selectedEvent.id);
-    }
-  };
-
-  const handleDeleteEvent = () => {
-    if (selectedEvent) {
-      deleteEventMutation.mutate(selectedEvent.id);
-    }
-  };
-
-  const getStatusBadge = (status?: string) => {
-    switch(status) {
-      case 'approved':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">Approved</Badge>;
-      case 'declined':
-        return <Badge className="bg-red-100 text-red-800 border-red-300">Declined</Badge>;
-      default:
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-300">Pending Review</Badge>;
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Event Management</h1>
-        <p className="text-muted-foreground">Review and manage campus events</p>
+        <p className="text-muted-foreground">Review and moderate events</p>
       </div>
       
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search events..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" className="sm:w-auto w-full">
-          <Filter className="h-4 w-4 mr-2" /> Filter
-        </Button>
-      </div>
-      
-      <Tabs defaultValue="all" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="all">
+        <TabsList>
           <TabsTrigger value="all">All Events</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="declined">Declined</TabsTrigger>
+          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+          <TabsTrigger value="past">Past Events</TabsTrigger>
         </TabsList>
         
-        <TabsContent value={activeTab} className="mt-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredEvents && filteredEvents.length > 0 ? (
-                filteredEvents.map((event) => (
-                  <Card key={event.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{event.title}</CardTitle>
-                          <CardDescription>
-                            Organized by: {event.club?.name || 'Unknown Club'}
-                          </CardDescription>
+        <TabsContent value="all" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>All Events</CardTitle>
+              <CardDescription>
+                View and manage all events in the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableCaption>List of all events in the system</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Club</TableHead>
+                    <TableHead>Event</TableHead>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Organizer</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {events && events.length > 0 ? (
+                    events.map((event) => (
+                      <React.Fragment key={event.id}>
+                        <TableRow>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={event.club?.logo_url || ''} alt={event.club?.name} />
+                                <AvatarFallback>{event.club?.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span>{event.club?.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{event.title}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleEventExpansion(event.id)}
+                                className="p-0 h-6 w-6"
+                              >
+                                {expandedEvents[event.id] ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Badge>{event.event_type}</Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <div className="flex items-center text-sm">
+                                <Calendar className="h-4 w-4 mr-1 text-gray-500" />
+                                {format(parseISO(event.start_time), 'MMM d, yyyy')}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Clock className="h-4 w-4 mr-1" />
+                                {format(parseISO(event.start_time), 'h:mm a')}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={event.profile?.avatar_url || ''} alt={event.profile?.full_name} />
+                                <AvatarFallback>{event.profile?.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span>{event.profile?.full_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {event.ui_status ? (
+                                <Badge 
+                                  variant={
+                                    event.ui_status === 'approved' 
+                                      ? 'success' 
+                                      : event.ui_status === 'rejected' 
+                                        ? 'destructive' 
+                                        : 'outline'
+                                  }
+                                >
+                                  {event.ui_status.charAt(0).toUpperCase() + event.ui_status.slice(1)}
+                                </Badge>
+                              ) : (
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => updateEventMutation.mutate({ id: event.id, ui_status: 'approved' })}
+                                    className="h-8 text-green-600 border-green-600 hover:bg-green-50"
+                                  >
+                                    <Check className="h-4 w-4 mr-1" /> Approve
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => deleteEventMutation.mutate(event.id)}
+                                    className="h-8 text-red-600 border-red-600 hover:bg-red-50"
+                                  >
+                                    <X className="h-4 w-4 mr-1" /> Delete
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        {expandedEvents[event.id] && (
+                          <TableRow className="bg-gray-50 dark:bg-gray-800">
+                            <TableCell colSpan={5}>
+                              <div className="space-y-4 p-4">
+                                {event.image_url && (
+                                  <div>
+                                    <img 
+                                      src={event.image_url} 
+                                      alt={event.title} 
+                                      className="rounded-md max-h-80 object-contain" 
+                                    />
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="flex items-center mb-2">
+                                    <MapPin className="h-4 w-4 mr-1 text-gray-500" />
+                                    <span className="text-sm">{event.location}</span>
+                                  </div>
+                                  <h4 className="font-medium">Description:</h4>
+                                  <p className="whitespace-pre-line text-sm">{event.description}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                          <AlertTriangle className="h-12 w-12 mb-2" />
+                          <h3 className="text-lg font-medium">No events found</h3>
+                          <p>There are no events in the system yet.</p>
                         </div>
-                        {getStatusBadge(event.ui_status)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {event.description || "No description provided"}
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>
-                            {event.start_time 
-                              ? format(new Date(event.start_time), 'PPP') 
-                              : 'Date not specified'}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>
-                            {event.start_time 
-                              ? format(new Date(event.start_time), 'p') 
-                              : 'Time not specified'}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>{event.location || 'Location not specified'}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-0 flex justify-end gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleReviewEvent(event)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Review
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))
-              ) : (
-                <Card>
-                  <CardContent className="py-10">
-                    <div className="text-center text-muted-foreground">
-                      No events found matching your criteria
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="upcoming">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upcoming Events</CardTitle>
+              <CardDescription>Events scheduled in the future</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 mb-2" />
+                <h3 className="text-lg font-medium">No upcoming events</h3>
+                <p>There are no upcoming events scheduled.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="past">
+          <Card>
+            <CardHeader>
+              <CardTitle>Past Events</CardTitle>
+              <CardDescription>Events that have already taken place</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 mb-2" />
+                <h3 className="text-lg font-medium">No past events</h3>
+                <p>There are no past events in the system.</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Event Review Dialog */}
-      <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-        <DialogContent className="max-w-3xl">
-          {selectedEvent && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedEvent.title}</DialogTitle>
-                <DialogDescription>
-                  Submitted by {selectedEvent.profile?.full_name || 'Unknown'} from {selectedEvent.club?.name || 'Unknown Club'}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4 my-2">
-                {selectedEvent.image_url && (
-                  <div className="w-full h-48 rounded-md overflow-hidden">
-                    <img 
-                      src={selectedEvent.image_url} 
-                      alt={selectedEvent.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <h4 className="font-medium">Description</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedEvent.description || "No description provided"}
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Event Details</h4>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>
-                          {selectedEvent.start_time 
-                            ? format(new Date(selectedEvent.start_time), 'PPP') 
-                            : 'Date not specified'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>
-                          {selectedEvent.start_time 
-                            ? `${format(new Date(selectedEvent.start_time), 'p')} - ${selectedEvent.end_time ? format(new Date(selectedEvent.end_time), 'p') : 'TBD'}`
-                            : 'Time not specified'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{selectedEvent.location || 'Location not specified'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Event Type</h4>
-                    <p className="text-sm">
-                      {selectedEvent.event_type || "Not specified"}
-                    </p>
-                    
-                    <h4 className="font-medium mt-4">Submission Date</h4>
-                    <p className="text-sm">
-                      {format(new Date(selectedEvent.created_at), 'PPP p')}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Decline Reason Input - only shown when declining */}
-                {selectedEvent.ui_status !== 'approved' && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Reason for Declining (Optional)</h4>
-                    <Textarea
-                      placeholder="Provide a reason for declining this event..."
-                      value={declineReason}
-                      onChange={(e) => setDeclineReason(e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
-              
-              <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                {selectedEvent.ui_status === 'approved' ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsReviewOpen(false)}
-                    >
-                      Close
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      onClick={handleDeleteEvent}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Delete Event
-                    </Button>
-                  </>
-                ) : selectedEvent.ui_status === 'declined' ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsReviewOpen(false)}
-                    >
-                      Close
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      onClick={handleDeleteEvent}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Delete Event
-                    </Button>
-                    <Button 
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={handleApproveEvent}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Approve
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsReviewOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      onClick={handleDeclineEvent}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Decline
-                    </Button>
-                    <Button 
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={handleApproveEvent}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Approve
-                    </Button>
-                  </>
-                )}
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

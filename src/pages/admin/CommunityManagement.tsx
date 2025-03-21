@@ -1,52 +1,51 @@
+
 import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { Search, Filter, Loader2, MessageSquare, UserCircle, Calendar, ThumbsUp, MessageCircle, Flag, Eye, XCircle, CheckCircle } from 'lucide-react';
+import { Check, X, AlertTriangle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
+import { 
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
-// Types for post data
+// Types for our posts data with UI state
 interface Post {
   id: string;
   title: string;
   content: string;
-  image_url: string | null;
   author_id: string;
   club_id: string;
   created_at: string;
   updated_at: string;
-  ui_status?: string;
-  reported?: boolean;
-  author?: {
-    full_name: string;
-    avatar_url: string | null;
-  };
+  image_url: string | null;
+  ui_status?: 'pending' | 'approved' | 'rejected'; // For UI state only
   club?: {
     name: string;
+    logo_url: string | null;
   };
-  _count?: {
-    comments: number;
-    likes: number;
+  profile?: {
+    full_name: string;
+    avatar_url: string | null;
   };
 }
 
 const CommunityManagement = () => {
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [isPostDialogOpen, setIsPostDialogOpen] = useState(false);
-  const [moderationReason, setModerationReason] = useState('');
-  const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | 'delete' | null>(null);
-
-  // Query to fetch posts with author and club data
+  const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
+  
+  // Fetch posts with club and profile information
   const { data: posts, isLoading } = useQuery({
     queryKey: ['admin-posts'],
     queryFn: async () => {
@@ -54,429 +53,285 @@ const CommunityManagement = () => {
         .from('posts')
         .select(`
           *,
-          author:author_id(full_name, avatar_url),
-          club:club_id(name)
+          club:club_id(name, logo_url),
+          profile:author_id(full_name, avatar_url)
         `)
         .order('created_at', { ascending: false });
-
-      if (error) {
-        toast({
-          title: "Error fetching posts",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
-      }
-
-      // Mock data for comments and likes count
-      return data.map((post: any) => ({
-        ...post,
-        _count: {
-          comments: Math.floor(Math.random() * 20),
-          likes: Math.floor(Math.random() * 50),
-        },
-        // Mock reported status for some posts
-        reported: Math.random() > 0.7,
-        // Mock status for posts
-        ui_status: Math.random() > 0.3 ? 'approved' : (Math.random() > 0.5 ? 'pending' : 'rejected'),
-      })) as Post[];
+        
+      if (error) throw error;
+      return data as Post[];
     },
   });
 
-  // Mutation to approve a post
-  const approvePostMutation = useMutation({
-    mutationFn: async (postId: string) => {
-      // In a real app, you would update a status field in the posts table
-      console.log("Approving post:", postId);
-      // Simulated API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return postId;
+  // Mutation for approving/rejecting posts (this would be implemented if we had status column)
+  const updatePostMutation = useMutation({
+    mutationFn: async ({ id, ui_status }: { id: string; ui_status: 'approved' | 'rejected' }) => {
+      // In a real application with a status column in the posts table:
+      // const { error } = await supabase
+      //   .from('posts')
+      //   .update({ status: status })
+      //   .eq('id', id);
+      //
+      // if (error) throw error;
+      
+      // Since we don't have a status column, we'll simulate it for UI purposes
+      return { id, ui_status };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['admin-posts'], (oldData: Post[] | undefined) => 
+        oldData?.map(post => 
+          post.id === data.id 
+            ? { ...post, ui_status: data.ui_status } 
+            : post
+        )
+      );
+      
       toast({
-        title: "Post approved",
-        description: "The post has been published to the community.",
+        title: `Post ${data.ui_status}`,
+        description: `The post has been ${data.ui_status} successfully.`,
       });
-      setIsPostDialogOpen(false);
-      setConfirmAction(null);
     },
     onError: (error) => {
       toast({
-        title: "Failed to approve post",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        title: "Action failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     },
   });
 
-  // Mutation to reject a post
-  const rejectPostMutation = useMutation({
-    mutationFn: async (postId: string) => {
-      // In a real app, you would update a status field in the posts table
-      console.log("Rejecting post:", postId, "Reason:", moderationReason);
-      // Simulated API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return postId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
-      toast({
-        title: "Post rejected",
-        description: "The post has been rejected and won't be visible in the community.",
-      });
-      setModerationReason('');
-      setIsPostDialogOpen(false);
-      setConfirmAction(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to reject post",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation to delete a post
+  // Delete post mutation
   const deletePostMutation = useMutation({
-    mutationFn: async (postId: string) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('posts')
         .delete()
-        .eq('id', postId);
-      
+        .eq('id', id);
+        
       if (error) throw error;
-      return postId;
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
+    onSuccess: (id) => {
+      queryClient.setQueryData(['admin-posts'], (oldData: Post[] | undefined) => 
+        oldData?.filter(post => post.id !== id)
+      );
+      
       toast({
         title: "Post deleted",
         description: "The post has been permanently deleted.",
       });
-      setIsPostDialogOpen(false);
-      setConfirmAction(null);
     },
     onError: (error) => {
       toast({
-        title: "Failed to delete post",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     },
   });
 
-  // Filter posts based on search and active tab
-  const filteredPosts = posts?.filter(post => {
-    const matchesSearch = 
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.club?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.author?.full_name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (activeTab === 'all') return matchesSearch;
-    if (activeTab === 'pending') return matchesSearch && post.ui_status === 'pending';
-    if (activeTab === 'reported') return matchesSearch && post.reported;
-    if (activeTab === 'approved') return matchesSearch && post.ui_status === 'approved';
-    
-    return matchesSearch;
-  });
-
-  const handleViewPost = (post: Post) => {
-    setSelectedPost(post);
-    setIsPostDialogOpen(true);
+  const togglePostExpansion = (postId: string) => {
+    setExpandedPosts(prev => ({
+      ...prev,
+      [postId]: !prev[postId]
+    }));
   };
 
-  // Confirm action handler
-  const handleConfirmAction = () => {
-    if (!selectedPost) return;
-    
-    if (confirmAction === 'approve') {
-      approvePostMutation.mutate(selectedPost.id);
-    } else if (confirmAction === 'reject') {
-      rejectPostMutation.mutate(selectedPost.id);
-    } else if (confirmAction === 'delete') {
-      deletePostMutation.mutate(selectedPost.id);
-    }
-  };
-
-  // Function to get status badge
-  const getStatusBadge = (post: Post) => {
-    if (post.reported) {
-      return <Badge className="bg-red-100 text-red-800 border-red-300">Reported</Badge>;
-    }
-    
-    switch(post.ui_status) {
-      case 'approved':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">Approved</Badge>;
-      case 'rejected':
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-300">Rejected</Badge>;
-      default:
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-300">Pending</Badge>;
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Community Management</h1>
-        <p className="text-muted-foreground">Moderate and manage community posts</p>
+        <p className="text-muted-foreground">Review and moderate posts in the community</p>
       </div>
       
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search posts..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" className="sm:w-auto w-full">
-          <Filter className="h-4 w-4 mr-2" /> Filter
-        </Button>
-      </div>
-      
-      <Tabs defaultValue="all" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="all">
+        <TabsList>
           <TabsTrigger value="all">All Posts</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="flagged">Flagged Posts</TabsTrigger>
           <TabsTrigger value="reported">Reported</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
         </TabsList>
         
-        <TabsContent value={activeTab} className="mt-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredPosts && filteredPosts.length > 0 ? (
-                filteredPosts.map((post) => (
-                  <Card key={post.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{post.title}</CardTitle>
-                          <CardDescription className="flex items-center gap-2">
-                            <span>By {post.author?.full_name || 'Unknown'}</span>
-                            <span>•</span>
-                            <span>From {post.club?.name || 'Unknown Club'}</span>
-                          </CardDescription>
+        <TabsContent value="all" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>All Posts</CardTitle>
+              <CardDescription>
+                View and manage all posts in the community
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableCaption>List of all posts in the system</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Club</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Author</TableHead>
+                    <TableHead>Posted</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {posts && posts.length > 0 ? (
+                    posts.map((post) => (
+                      <React.Fragment key={post.id}>
+                        <TableRow>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={post.club?.logo_url || ''} alt={post.club?.name} />
+                                <AvatarFallback>{post.club?.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span>{post.club?.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{post.title}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => togglePostExpansion(post.id)}
+                                className="p-0 h-6 w-6"
+                              >
+                                {expandedPosts[post.id] ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={post.profile?.avatar_url || ''} alt={post.profile?.full_name} />
+                                <AvatarFallback>{post.profile?.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span>{post.profile?.full_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(post.created_at), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {post.ui_status ? (
+                                <Badge 
+                                  variant={
+                                    post.ui_status === 'approved' 
+                                      ? 'success' 
+                                      : post.ui_status === 'rejected' 
+                                        ? 'destructive' 
+                                        : 'outline'
+                                  }
+                                >
+                                  {post.ui_status.charAt(0).toUpperCase() + post.ui_status.slice(1)}
+                                </Badge>
+                              ) : (
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => updatePostMutation.mutate({ id: post.id, ui_status: 'approved' })}
+                                    className="h-8 text-green-600 border-green-600 hover:bg-green-50"
+                                  >
+                                    <Check className="h-4 w-4 mr-1" /> Approve
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => deletePostMutation.mutate(post.id)}
+                                    className="h-8 text-red-600 border-red-600 hover:bg-red-50"
+                                  >
+                                    <X className="h-4 w-4 mr-1" /> Delete
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        {expandedPosts[post.id] && (
+                          <TableRow className="bg-gray-50 dark:bg-gray-800">
+                            <TableCell colSpan={5}>
+                              <div className="space-y-4 p-4">
+                                {post.image_url && (
+                                  <div>
+                                    <img 
+                                      src={post.image_url} 
+                                      alt={post.title} 
+                                      className="rounded-md max-h-80 object-contain" 
+                                    />
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 className="font-medium">Content:</h4>
+                                  <p className="whitespace-pre-line text-sm">{post.content}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                          <AlertTriangle className="h-12 w-12 mb-2" />
+                          <h3 className="text-lg font-medium">No posts found</h3>
+                          <p>There are no posts in the system yet.</p>
                         </div>
-                        {getStatusBadge(post)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                        {post.content}
-                      </p>
-                      
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {format(new Date(post.created_at), 'PPP')}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center">
-                            <ThumbsUp className="h-4 w-4 mr-1" />
-                            {post._count?.likes || 0}
-                          </div>
-                          <div className="flex items-center">
-                            <MessageCircle className="h-4 w-4 mr-1" />
-                            {post._count?.comments || 0}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-0 flex justify-end">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleViewPost(post)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Review
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))
-              ) : (
-                <Card>
-                  <CardContent className="py-10">
-                    <div className="text-center text-muted-foreground">
-                      No posts found matching your criteria
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="flagged">
+          <Card>
+            <CardHeader>
+              <CardTitle>Flagged Posts</CardTitle>
+              <CardDescription>Posts that have been flagged for review</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 mb-2" />
+                <h3 className="text-lg font-medium">No flagged posts</h3>
+                <p>There are no posts that have been flagged for review.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="reported">
+          <Card>
+            <CardHeader>
+              <CardTitle>Reported Posts</CardTitle>
+              <CardDescription>Posts that have been reported by users</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 mb-2" />
+                <h3 className="text-lg font-medium">No reported posts</h3>
+                <p>There are no posts that have been reported by users.</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Post Review Dialog */}
-      <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          {selectedPost && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedPost.title}</DialogTitle>
-                <DialogDescription>
-                  Posted by {selectedPost.author?.full_name || 'Unknown'} from {selectedPost.club?.name || 'Unknown Club'}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4 my-2">
-                {selectedPost.image_url && (
-                  <div className="w-full h-48 rounded-md overflow-hidden">
-                    <img 
-                      src={selectedPost.image_url} 
-                      alt={selectedPost.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {selectedPost.author?.avatar_url ? (
-                      <img 
-                        src={selectedPost.author.avatar_url} 
-                        alt={selectedPost.author.full_name} 
-                        className="h-8 w-8 rounded-full"
-                      />
-                    ) : (
-                      <UserCircle className="h-8 w-8 text-muted-foreground" />
-                    )}
-                    <div>
-                      <p className="font-medium">{selectedPost.author?.full_name || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(selectedPost.created_at), 'PPP p')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="text-sm whitespace-pre-line">
-                    {selectedPost.content}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center">
-                    <ThumbsUp className="h-4 w-4 mr-1" />
-                    {selectedPost._count?.likes || 0} likes
-                  </div>
-                  <div className="flex items-center">
-                    <MessageCircle className="h-4 w-4 mr-1" />
-                    {selectedPost._count?.comments || 0} comments
-                  </div>
-                </div>
-                
-                {selectedPost.reported && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start gap-2">
-                    <Flag className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm text-red-800">This post has been reported</p>
-                      <p className="text-xs text-red-700">Reason: Contains inappropriate content</p>
-                    </div>
-                  </div>
-                )}
-                
-                {selectedPost.ui_status !== 'approved' && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Moderation Reason (Optional)</h4>
-                    <Textarea
-                      placeholder="Provide a reason for rejecting or removing this post..."
-                      value={moderationReason}
-                      onChange={(e) => setModerationReason(e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
-              
-              <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsPostDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                {selectedPost.ui_status === 'approved' ? (
-                  <Button 
-                    variant="destructive"
-                    onClick={() => setConfirmAction('delete')}
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Delete Post
-                  </Button>
-                ) : (
-                  <>
-                    <Button 
-                      variant="destructive"
-                      onClick={() => setConfirmAction('reject')}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Reject
-                    </Button>
-                    <Button 
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => setConfirmAction('approve')}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Approve
-                    </Button>
-                  </>
-                )}
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation Dialog */}
-      {confirmAction && (
-        <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {confirmAction === 'approve' && "Approve Post"}
-                {confirmAction === 'reject' && "Reject Post"}
-                {confirmAction === 'delete' && "Delete Post"}
-              </DialogTitle>
-              <DialogDescription>
-                {confirmAction === 'approve' && "This post will be published to the community."}
-                {confirmAction === 'reject' && "This post will be rejected and not visible in the community."}
-                {confirmAction === 'delete' && "This post will be permanently deleted."}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setConfirmAction(null)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant={confirmAction === 'approve' ? "default" : "destructive"}
-                onClick={handleConfirmAction}
-              >
-                Confirm
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 };
