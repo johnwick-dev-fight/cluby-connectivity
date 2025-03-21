@@ -53,16 +53,18 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // Function to fetch user profile and set user state
   const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
     try {
-      // Check for admin role in user metadata first
+      // Define the default role
       let role: UserRole = 'student';
       
-      // Check if role is defined in user metadata
-      if (supabaseUser.user_metadata?.role === 'admin') {
+      // Check for admin email first (most reliable method)
+      if (supabaseUser.email === 'admin@cluby.com') {
+        role = 'admin';
+      } 
+      // Then check user metadata
+      else if (supabaseUser.user_metadata?.role === 'admin') {
         role = 'admin';
       } else if (supabaseUser.user_metadata?.role === 'clubRepresentative') {
         role = 'clubRepresentative';
-      } else if (supabaseUser.email === 'admin@cluby.com') {
-        role = 'admin';
       } else {
         // Fallback check for club representatives
         const { data: clubRep } = await supabase

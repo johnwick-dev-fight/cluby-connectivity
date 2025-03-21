@@ -16,7 +16,9 @@ import {
   HelpCircle,
   FileText,
   Heart,
-  Award
+  Award,
+  ClipboardList,
+  UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -25,7 +27,8 @@ const Sidebar: React.FC = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
   
-  const navItems = [
+  // Common navigation items for all users
+  const commonNavItems = [
     { 
       name: 'Dashboard', 
       path: '/dashboard', 
@@ -47,11 +50,6 @@ const Sidebar: React.FC = () => {
       icon: <MessageSquare size={20} /> 
     },
     { 
-      name: 'Recruit', 
-      path: '/recruit', 
-      icon: <Briefcase size={20} /> 
-    },
-    { 
       name: 'Profile', 
       path: '/profile', 
       icon: <UserCircle size={20} /> 
@@ -63,43 +61,67 @@ const Sidebar: React.FC = () => {
     }
   ];
   
-  // Admin-only items
-  const adminItems = [
+  // Student-specific navigation items
+  const studentNavItems = [
+    { 
+      name: 'Recruit', 
+      path: '/recruit', 
+      icon: <Briefcase size={20} /> 
+    }
+  ];
+  
+  // Club Representative-specific navigation items
+  const clubRepNavItems = [
+    { 
+      name: 'Recruit', 
+      path: '/recruit', 
+      icon: <Briefcase size={20} /> 
+    },
+    { 
+      name: 'Create Position', 
+      path: '/recruit/create', 
+      icon: <ClipboardList size={20} /> 
+    },
+    { 
+      name: 'Members', 
+      path: '/club-members', 
+      icon: <UserPlus size={20} /> 
+    }
+  ];
+  
+  // Admin-only navigation items
+  const adminNavItems = [
     { 
       name: 'Club Approvals', 
       path: '/admin/club-approvals', 
       icon: <ShieldAlert size={20} /> 
+    },
+    { 
+      name: 'User Management', 
+      path: '/admin/users', 
+      icon: <Users size={20} /> 
+    },
+    { 
+      name: 'Platform Overview', 
+      path: '/admin/overview', 
+      icon: <LayoutDashboard size={20} /> 
     }
   ];
 
-  // Additional non-working buttons
-  const additionalFeatures = [
-    {
-      name: 'Notifications',
-      icon: <Bell size={18} />,
-      variant: 'ghost' as const
-    },
-    {
-      name: 'Help Center',
-      icon: <HelpCircle size={18} />,
-      variant: 'ghost' as const
-    },
-    {
-      name: 'Documentation',
-      icon: <FileText size={18} />,
-      variant: 'ghost' as const
-    },
-    {
-      name: 'Favorites',
-      icon: <Heart size={18} />,
-      variant: 'ghost' as const
-    },
-    {
-      name: 'Achievements',
-      icon: <Award size={18} />,
-      variant: 'cluby' as const
+  // Get role-specific nav items
+  const getRoleSpecificNavItems = () => {
+    switch(user?.role) {
+      case 'admin':
+        return [...commonNavItems];
+      case 'clubRepresentative':
+        return [...commonNavItems, ...clubRepNavItems];
+      case 'student':
+      default:
+        return [...commonNavItems, ...studentNavItems];
     }
-  ];
+  };
+
+  const navItems = getRoleSpecificNavItems();
   
   return (
     <aside className="w-64 hidden md:block border-r border-gray-200 dark:border-gray-800 h-[calc(100vh-4rem)] overflow-y-auto bg-white dark:bg-gray-900 transition-colors duration-200">
@@ -125,11 +147,11 @@ const Sidebar: React.FC = () => {
             <>
               <div className="pt-5 pb-2">
                 <p className="px-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                  Admin
+                  Administration
                 </p>
               </div>
               
-              {adminItems.map((item) => (
+              {adminNavItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
@@ -146,26 +168,6 @@ const Sidebar: React.FC = () => {
               ))}
             </>
           )}
-
-          <div className="pt-5 pb-2">
-            <p className="px-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-              Additional Features
-            </p>
-          </div>
-          
-          <div className="space-y-2 px-3">
-            {additionalFeatures.map((feature, index) => (
-              <Button 
-                key={index}
-                variant={feature.variant}
-                className="w-full justify-start text-left"
-                onClick={() => {}}
-              >
-                <span className="mr-2">{feature.icon}</span>
-                {feature.name}
-              </Button>
-            ))}
-          </div>
         </nav>
       </div>
     </aside>

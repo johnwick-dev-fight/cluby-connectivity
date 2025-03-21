@@ -11,9 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { z } from 'zod';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, InfoIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Login schema
 const loginSchema = z.object({
@@ -36,7 +35,6 @@ const Auth = () => {
   const navigate = useNavigate();
   const { user, isLoading, login, register } = useAuth();
   const [activeTab, setActiveTab] = React.useState('login');
-  const [showAdminInfo, setShowAdminInfo] = useState(false);
   
   // Redirect to dashboard if already authenticated
   useEffect(() => {
@@ -105,26 +103,6 @@ const Auth = () => {
           <CardDescription>Connect with clubs and events on campus</CardDescription>
         </CardHeader>
         <CardContent>
-          {showAdminInfo && (
-            <Alert className="mb-6 bg-blue-50 border-blue-200">
-              <InfoIcon className="h-4 w-4 text-blue-500" />
-              <AlertDescription className="text-blue-700">
-                <div className="font-medium">Admin Login</div>
-                <div className="text-sm">Email: admin@cluby.com</div>
-                <div className="text-sm">Password: Admin123!</div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mb-4" 
-            onClick={() => setShowAdminInfo(!showAdminInfo)}
-          >
-            {showAdminInfo ? "Hide Admin Info" : "Show Admin Info"}
-          </Button>
-
           <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
