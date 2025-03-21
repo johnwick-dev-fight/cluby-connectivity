@@ -25,8 +25,9 @@ interface Profile {
   updated_at: string;
 }
 
+// Updated interface to match actual data structure from the database
 interface ClubRepresentative {
-  id: string;
+  representative_id: string;
   name: string;
 }
 

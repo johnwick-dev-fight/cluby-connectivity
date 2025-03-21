@@ -51,32 +51,40 @@ const AdminOverview = () => {
     queryFn: async () => {
       // Fetch counts from various tables
       const [
-        { count: clubsCount, error: clubsError },
-        { count: usersCount, error: usersError },
-        { count: eventsCount, error: eventsError },
-        { count: positionsCount, error: positionsError },
-        { count: pendingClubsCount, error: pendingClubsError },
-        { count: postsCount, error: postsError },
+        clubsResult,
+        usersResult,
+        eventsResult,
+        positionsResult,
+        pendingClubsResult,
+        postsResult,
       ] = await Promise.all([
-        supabase.from('clubs').count(),
-        supabase.from('profiles').count(),
-        supabase.from('events').count(),
-        supabase.from('recruitment_positions').count(),
-        supabase.from('clubs').count().eq('status', 'pending'),
-        supabase.from('posts').count(),
+        supabase.from('clubs').select('id', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('events').select('id', { count: 'exact', head: true }),
+        supabase.from('recruitment_positions').select('id', { count: 'exact', head: true }),
+        supabase.from('clubs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('posts').select('id', { count: 'exact', head: true }),
       ]);
 
-      if (clubsError || usersError || eventsError || positionsError || pendingClubsError || postsError) {
+      const clubsCount = clubsResult.count || 0;
+      const usersCount = usersResult.count || 0;
+      const eventsCount = eventsResult.count || 0;
+      const positionsCount = positionsResult.count || 0;
+      const pendingClubsCount = pendingClubsResult.count || 0;
+      const postsCount = postsResult.count || 0;
+
+      if (clubsResult.error || usersResult.error || eventsResult.error || 
+          positionsResult.error || pendingClubsResult.error || postsResult.error) {
         throw new Error('Failed to fetch statistics');
       }
 
       return {
-        clubsCount: clubsCount || 0,
-        usersCount: usersCount || 0,
-        eventsCount: eventsCount || 0,
-        positionsCount: positionsCount || 0,
-        pendingClubsCount: pendingClubsCount || 0,
-        postsCount: postsCount || 0,
+        clubsCount,
+        usersCount,
+        eventsCount,
+        positionsCount,
+        pendingClubsCount,
+        postsCount,
       };
     },
   });
