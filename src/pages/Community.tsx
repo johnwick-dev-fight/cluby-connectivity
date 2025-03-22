@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import CreatePostDialog from '@/components/community/CreatePostDialog';
 import PostFilters from '@/components/community/PostFilters';
-import { getInitials } from '@/lib/utils';
+import { getInitials, formatRelativeTime } from '@/lib/utils';
 
 interface PostAuthor {
   full_name: string;
@@ -68,7 +68,6 @@ interface PostMetadata {
   comments: number;
 }
 
-// Define table types for post_likes for typechecking
 interface PostLike {
   id: string;
   post_id: string;
@@ -710,10 +709,7 @@ const PostCard: React.FC<PostCardProps> = ({
 }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      Math.round((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-      'day'
-    ).replace('in ', '');
+    return formatRelativeTime(date);
   };
   
   const isOwner = post.author_id === currentUserId;
@@ -734,7 +730,7 @@ const PostCard: React.FC<PostCardProps> = ({
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage 
-                src={post.club?.logo_url || post.author?.avatar_url || "https://via.placeholder.com/150?text=User"} 
+                src={post.club?.logo_url || (post.author ? post.author.avatar_url : null) || "https://via.placeholder.com/150?text=User"} 
               />
               <AvatarFallback>
                 {getInitials(post.club?.name || (post.author ? post.author.full_name : 'User'))}
