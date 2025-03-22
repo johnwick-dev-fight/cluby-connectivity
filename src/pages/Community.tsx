@@ -64,6 +64,14 @@ interface PostMetadata {
   comments: number;
 }
 
+// Define table types for post_likes for typechecking
+interface PostLike {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+}
+
 const Community = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [userClubs, setUserClubs] = useState<Array<{ id: string; name: string }>>([]);
@@ -180,24 +188,24 @@ const Community = () => {
   
   const fetchPostMetadata = async (postId: string): Promise<PostMetadata> => {
     try {
-      // Count likes
+      // Count likes using raw SQL count
       const { count: likesCount, error: likesError } = await supabase
         .from('post_likes')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('post_id', postId);
         
       // Check if user liked the post
       const { data: likedByUser, error: likedError } = await supabase
         .from('post_likes')
-        .select('id')
+        .select('*')
         .eq('post_id', postId)
         .eq('user_id', user?.id || '')
-        .single();
+        .maybeSingle();
         
       // Count comments
       const { count: commentsCount, error: commentsError } = await supabase
         .from('comments')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('post_id', postId);
         
       if (likesError || commentsError) {
@@ -267,7 +275,10 @@ const Community = () => {
         // Like the post
         await supabase
           .from('post_likes')
-          .insert({ post_id: postId, user_id: user.id });
+          .insert({ 
+            post_id: postId, 
+            user_id: user.id 
+          } as any);
           
         setPosts(posts.map(p => {
           if (p.id === postId) {
@@ -292,7 +303,9 @@ const Community = () => {
     try {
       const { error } = await supabase
         .from('posts')
-        .update({ is_flagged: true })
+        .update({ 
+          is_flagged: true 
+        })
         .eq('id', selectedPostId);
         
       if (error) {

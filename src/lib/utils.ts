@@ -63,7 +63,7 @@ export function formatRelativeTime(dateString: string): string {
 }
 
 // Function to truncate text with ellipsis
-export function truncateText(text: string, maxLength: number): string {
+export function truncateText(text: string | null | undefined, maxLength: number): string {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
