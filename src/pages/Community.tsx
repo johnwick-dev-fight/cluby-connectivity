@@ -33,6 +33,18 @@ import {
 } from '@/components/ui/alert-dialog';
 import CreatePostDialog from '@/components/community/CreatePostDialog';
 import PostFilters from '@/components/community/PostFilters';
+import { getInitials } from '@/lib/utils';
+
+interface PostAuthor {
+  full_name: string;
+  avatar_url: string | null;
+  role: string;
+}
+
+interface PostClub {
+  name: string;
+  logo_url: string | null;
+}
 
 interface Post {
   id: string;
@@ -46,15 +58,8 @@ interface Post {
   is_flagged: boolean;
   likes: number;
   comments: number;
-  author: {
-    full_name: string;
-    avatar_url: string | null;
-    role: string;
-  };
-  club?: {
-    name: string;
-    logo_url: string | null;
-  };
+  author: PostAuthor | null;
+  club?: PostClub | null;
   isLiked?: boolean;
 }
 
@@ -163,12 +168,23 @@ const Community = () => {
         const postsWithMetadata = await Promise.all(
           data.map(async (post) => {
             const metadata = await fetchPostMetadata(post.id);
-            return {
+            
+            // Handle potential error cases with author data
+            const processedPost: Post = {
               ...post,
               likes: metadata.likes,
               comments: metadata.comments,
               isLiked: metadata.is_liked,
-            } as Post;
+              // Ensure author and club have correct structure or are null
+              author: post.author && typeof post.author === 'object' && !('error' in post.author) 
+                ? post.author as PostAuthor 
+                : null,
+              club: post.club && typeof post.club === 'object' && !('error' in post.club)
+                ? post.club as PostClub 
+                : null
+            };
+            
+            return processedPost;
           })
         );
         
@@ -751,16 +767,16 @@ const PostCard: React.FC<PostCardProps> = ({
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage 
-                src={post.club ? post.club.logo_url || "https://via.placeholder.com/150?text=Club" : post.author?.avatar_url || "https://via.placeholder.com/150?text=User"} 
+                src={post.club?.logo_url || post.author?.avatar_url || "https://via.placeholder.com/150?text=User"} 
               />
               <AvatarFallback>
-                {post.club ? post.club.name.charAt(0) : post.author?.full_name.charAt(0) || 'U'}
+                {getInitials(post.club?.name || post.author?.full_name || 'User')}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center gap-1">
                 <p className="font-medium dark:text-white">
-                  {post.club ? post.club.name : post.author?.full_name}
+                  {post.club?.name || post.author?.full_name || 'Unknown User'}
                 </p>
                 {/* Post type badge */}
                 {postTypeIcon && (
