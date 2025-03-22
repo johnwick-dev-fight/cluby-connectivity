@@ -158,17 +158,19 @@ const Community = () => {
           data.map(async (post) => {
             const metadata = await fetchPostMetadata(post.id);
             
+            const authorData = post.author && typeof post.author === 'object' && 
+                              !('error' in post.author) ? post.author as PostAuthor : null;
+            
+            const clubData = post.club && typeof post.club === 'object' && 
+                            !('error' in post.club) ? post.club as PostClub : null;
+            
             const processedPost: Post = {
               ...post,
               likes: metadata.likes,
               comments: metadata.comments,
               isLiked: metadata.is_liked,
-              author: post.author && typeof post.author === 'object' && !('error' in post.author) 
-                ? post.author as PostAuthor 
-                : null,
-              club: post.club && typeof post.club === 'object' && !('error' in post.club)
-                ? post.club as PostClub 
-                : null,
+              author: authorData,
+              club: clubData,
               post_type: (post.post_type as 'general' | 'event' | 'job' | 'achievement') || 'general'
             };
             
