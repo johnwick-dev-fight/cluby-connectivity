@@ -64,16 +64,18 @@ export function formatRelativeTime(dateString: string): string {
 
 // Function to truncate text with ellipsis
 export function truncateText(text: string, maxLength: number): string {
+  if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 }
 
 // Function to get initials from a name
-export function getInitials(name: string): string {
-  if (!name) return '?';
+export function getInitials(name: string | null | undefined): string {
+  if (!name) return '??';
+  
   return name
     .split(' ')
-    .map(part => part[0]?.toUpperCase() || '')
+    .map(part => part && part[0] ? part[0].toUpperCase() : '')
     .join('')
     .slice(0, 2);
 }

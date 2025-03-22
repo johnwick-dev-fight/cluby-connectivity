@@ -123,7 +123,9 @@ const Sidebar: React.FC = () => {
 
   // Get role-specific nav items
   const getRoleSpecificNavItems = () => {
-    switch(user?.role) {
+    if (!user) return [...commonNavItems];
+    
+    switch(user.role) {
       case 'admin':
         return [...commonNavItems];
       case 'clubRepresentative':

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +48,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
+import { getInitials } from '@/lib/utils';
 
 // Define interfaces
 interface ClubRepresentative {
@@ -118,9 +120,9 @@ const UserManagement = () => {
       
       // Transform the data to match the ClubRepresentative interface
       const clubRepresentatives = data.map(club => ({
-        id: club.representative_id,
-        name: club.name,
-        club_id: club.id,
+        id: club.representative_id || '',
+        name: club.name || 'Unknown Club',
+        club_id: club.id || '',
       }));
       
       return clubRepresentatives as ClubRepresentative[];
@@ -210,15 +212,15 @@ const UserManagement = () => {
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>{student.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">{student.full_name}</span>
+                  <span className="font-medium">{student.full_name || 'Unknown Student'}</span>
                 </div>
               </TableCell>
-              <TableCell>{student.email}</TableCell>
+              <TableCell>{student.email || 'No email'}</TableCell>
               <TableCell>{student.department || 'Not specified'}</TableCell>
               <TableCell>{student.year || 'Not specified'}</TableCell>
-              <TableCell>{format(new Date(student.created_at), 'MMM d, yyyy')}</TableCell>
+              <TableCell>{student.created_at ? format(new Date(student.created_at), 'MMM d, yyyy') : 'Unknown'}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -307,7 +309,7 @@ const UserManagement = () => {
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>{rep.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{getInitials(rep.name)}</AvatarFallback>
                   </Avatar>
                   <span className="font-medium">{rep.name}</span>
                 </div>

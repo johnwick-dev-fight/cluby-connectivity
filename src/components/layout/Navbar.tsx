@@ -15,17 +15,10 @@ import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ThemeSwitcher from '@/components/ThemeSwitcher';
+import { getInitials } from '@/lib/utils';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
-  
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part[0]?.toUpperCase() || '')
-      .join('')
-      .slice(0, 2);
-  };
 
   return (
     <nav className="border-b bg-white dark:bg-gray-900 dark:border-gray-800">
@@ -59,7 +52,7 @@ const Navbar: React.FC = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar>
-                  <AvatarImage src="/avatar-placeholder.jpg" alt={user?.profile?.full_name} />
+                  <AvatarImage src="/avatar-placeholder.jpg" alt={user?.profile?.full_name || 'User avatar'} />
                   <AvatarFallback>{user ? getInitials(user.profile?.full_name || user.email) : '??'}</AvatarFallback>
                 </Avatar>
               </Button>
@@ -67,8 +60,8 @@ const Navbar: React.FC = () => {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user?.profile?.full_name || user?.email}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm font-medium leading-none">{user?.profile?.full_name || user?.email || 'User'}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email || 'No email'}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
