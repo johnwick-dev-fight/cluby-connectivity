@@ -708,8 +708,7 @@ const PostCard: React.FC<PostCardProps> = ({
   postTypeIcon
 }) => {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return formatRelativeTime(date);
+    return formatRelativeTime(dateString);
   };
   
   const isOwner = post.author_id === currentUserId;
