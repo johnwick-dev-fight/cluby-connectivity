@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -98,7 +97,6 @@ const Community = () => {
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
-      // Base query
       let query = supabase
         .from('posts')
         .select(`
@@ -117,23 +115,19 @@ const Community = () => {
         `)
         .order('created_at', { ascending: false });
       
-      // Apply search filter if provided
       if (filters.search) {
         query = query.or(`title.ilike.%${filters.search}%,content.ilike.%${filters.search}%`);
       }
       
-      // Apply post type filter if provided
       if (filters.postType) {
         query = query.eq('post_type', filters.postType);
       }
       
-      // Filter by author type
       if (filters.author === 'students') {
         query = query.eq('club_id', null);
       } else if (filters.author === 'clubs') {
         query = query.not('club_id', 'is', null);
       } else if (filters.author === 'following' && user) {
-        // Get clubs that the user follows
         const { data: followedClubs } = await supabase
           .from('club_members')
           .select('club_id')
@@ -144,19 +138,16 @@ const Community = () => {
         if (clubIds.length > 0) {
           query = query.in('club_id', clubIds);
         } else {
-          // If user doesn't follow any clubs, return no posts
           query = query.eq('id', '-1');
         }
       }
       
-      // Show or hide flagged posts based on user role
       if (user?.role !== 'admin') {
         query = query.eq('is_flagged', false);
       } else if (filters.postType === 'flagged') {
         query = query.eq('is_flagged', true);
       }
       
-      // Execute the query
       const { data, error } = await query;
       
       if (error) {
@@ -164,24 +155,22 @@ const Community = () => {
       }
 
       if (data) {
-        // Fetch metadata for each post (likes, comments)
         const postsWithMetadata = await Promise.all(
           data.map(async (post) => {
             const metadata = await fetchPostMetadata(post.id);
             
-            // Handle potential error cases with author data
             const processedPost: Post = {
               ...post,
               likes: metadata.likes,
               comments: metadata.comments,
               isLiked: metadata.is_liked,
-              // Ensure author and club have correct structure or are null
               author: post.author && typeof post.author === 'object' && !('error' in post.author) 
                 ? post.author as PostAuthor 
                 : null,
               club: post.club && typeof post.club === 'object' && !('error' in post.club)
                 ? post.club as PostClub 
-                : null
+                : null,
+              post_type: (post.post_type as 'general' | 'event' | 'job' | 'achievement') || 'general'
             };
             
             return processedPost;
@@ -204,13 +193,11 @@ const Community = () => {
   
   const fetchPostMetadata = async (postId: string): Promise<PostMetadata> => {
     try {
-      // Count likes using raw SQL count
       const { count: likesCount, error: likesError } = await supabase
         .from('post_likes')
         .select('*', { count: 'exact', head: true })
         .eq('post_id', postId);
         
-      // Check if user liked the post
       const { data: likedByUser, error: likedError } = await supabase
         .from('post_likes')
         .select('*')
@@ -218,7 +205,6 @@ const Community = () => {
         .eq('user_id', user?.id || '')
         .maybeSingle();
         
-      // Count comments
       const { count: commentsCount, error: commentsError } = await supabase
         .from('comments')
         .select('*', { count: 'exact', head: true })
@@ -274,7 +260,6 @@ const Community = () => {
       if (!post) return;
       
       if (post.isLiked) {
-        // Unlike the post
         await supabase
           .from('post_likes')
           .delete()
@@ -288,7 +273,6 @@ const Community = () => {
           return p;
         }));
       } else {
-        // Like the post
         await supabase
           .from('post_likes')
           .insert({ 
@@ -333,7 +317,6 @@ const Community = () => {
         description: "The post has been flagged for review"
       });
       
-      // Update local state
       setPosts(posts.map(post => {
         if (post.id === selectedPostId) {
           return { ...post, is_flagged: true };
@@ -372,7 +355,6 @@ const Community = () => {
         description: "The post has been permanently deleted"
       });
       
-      // Update local state
       setPosts(posts.filter(post => post.id !== selectedPostId));
       
     } catch (error) {
@@ -406,7 +388,6 @@ const Community = () => {
     fetchUserClubs();
   }, [user, filters]);
   
-  // Get post type icon based on post type
   const getPostTypeIcon = (type: string) => {
     switch (type) {
       case 'event':
@@ -428,9 +409,7 @@ const Community = () => {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main content column */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Create post card */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
@@ -468,10 +447,8 @@ const Community = () => {
             </CardContent>
           </Card>
           
-          {/* Posts list */}
           <div className="space-y-4">
             {isLoading ? (
-              // Skeleton loading
               Array.from({ length: 3 }).map((_, index) => (
                 <Card key={index} className="dark:bg-gray-800 dark:border-gray-700">
                   <CardHeader className="p-4 pb-0">
@@ -540,9 +517,7 @@ const Community = () => {
           </div>
         </div>
         
-        {/* Sidebar column */}
         <div className="space-y-6">
-          {/* Post filters */}
           <PostFilters 
             filters={filters}
             onFilterChange={handleFilterChange}
@@ -550,7 +525,6 @@ const Community = () => {
             userRole={user?.role || 'student'}
           />
           
-          {/* Trending topics */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader>
               <h3 className="font-semibold dark:text-white">Trending Topics</h3>
@@ -583,7 +557,6 @@ const Community = () => {
             </CardContent>
           </Card>
           
-          {/* Active clubs */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader>
               <h3 className="font-semibold dark:text-white">Active Clubs</h3>
@@ -645,7 +618,6 @@ const Community = () => {
             </CardFooter>
           </Card>
           
-          {/* Upcoming events */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader>
               <h3 className="font-semibold dark:text-white">Upcoming Events</h3>
@@ -673,7 +645,6 @@ const Community = () => {
         </div>
       </div>
       
-      {/* Create post dialog */}
       <CreatePostDialog 
         open={createPostOpen} 
         onOpenChange={setCreatePostOpen}
@@ -681,7 +652,6 @@ const Community = () => {
         userClubs={userClubs}
       />
       
-      {/* Flag post alert dialog */}
       <AlertDialog open={flagAlertOpen} onOpenChange={setFlagAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -699,7 +669,6 @@ const Community = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Delete post alert dialog */}
       <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -720,7 +689,6 @@ const Community = () => {
   );
 };
 
-// Post Card Component
 interface PostCardProps {
   post: Post;
   onLike: () => void;
@@ -740,7 +708,6 @@ const PostCard: React.FC<PostCardProps> = ({
   userRole,
   postTypeIcon
 }) => {
-  // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
@@ -770,15 +737,14 @@ const PostCard: React.FC<PostCardProps> = ({
                 src={post.club?.logo_url || post.author?.avatar_url || "https://via.placeholder.com/150?text=User"} 
               />
               <AvatarFallback>
-                {getInitials(post.club?.name || post.author?.full_name || 'User')}
+                {getInitials(post.club?.name || (post.author ? post.author.full_name : 'User'))}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center gap-1">
                 <p className="font-medium dark:text-white">
-                  {post.club?.name || post.author?.full_name || 'Unknown User'}
+                  {post.club?.name || (post.author ? post.author.full_name : 'Unknown User')}
                 </p>
-                {/* Post type badge */}
                 {postTypeIcon && (
                   <Badge variant="outline" className="ml-2 px-2 py-0 h-5 text-xs flex items-center gap-1 bg-gray-50 dark:bg-gray-700 dark:text-gray-300">
                     {postTypeIcon}
@@ -792,7 +758,6 @@ const PostCard: React.FC<PostCardProps> = ({
             </div>
           </div>
           
-          {/* Post actions dropdown */}
           {canModify && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
