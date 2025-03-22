@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -154,15 +154,38 @@ const Community = () => {
       }
 
       if (data) {
-        const postsWithMetadata = await Promise.all(
+        const processedPosts = await processPostsData(data);
+        
+        setPosts(processedPosts);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load posts. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const processPostsData = useCallback(
+    async (data: any[]) => {
+      if (!data || !Array.isArray(data)) return [];
+      
+      try {
+        const processedPosts = await Promise.all(
           data.map(async (post) => {
             const metadata = await fetchPostMetadata(post.id);
             
-            const authorData = post.author && typeof post.author === 'object' && 
-                              !('error' in post.author) ? post.author as PostAuthor : null;
+            const authorData = post.author ? 
+              (typeof post.author === 'object' && !('error' in post.author) ? post.author as PostAuthor : null) 
+              : null;
             
-            const clubData = post.club && typeof post.club === 'object' && 
-                            !('error' in post.club) ? post.club as PostClub : null;
+            const clubData = post.club ? 
+              (typeof post.club === 'object' && !('error' in post.club) ? post.club as PostClub : null) 
+              : null;
             
             const processedPost: Post = {
               ...post,
@@ -178,20 +201,15 @@ const Community = () => {
           })
         );
         
-        setPosts(postsWithMetadata);
+        return processedPosts;
+      } catch (error) {
+        console.error('Error processing posts data:', error);
+        return [];
       }
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load posts. Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
+    },
+    [fetchPostMetadata]
+  );
+
   const fetchPostMetadata = async (postId: string): Promise<PostMetadata> => {
     try {
       const { count: likesCount, error: likesError } = await supabase
