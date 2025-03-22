@@ -79,3 +79,18 @@ export function getInitials(name: string | null | undefined): string {
     .join('')
     .slice(0, 2);
 }
+
+// Function to create notification message for flagged posts
+export function createFlagNotificationMessage(postTitle: string, flaggerName: string): string {
+  return `Your post "${truncateText(postTitle, 30)}" has been flagged by ${flaggerName} for review.`;
+}
+
+// Function to check if an image URL is valid
+export function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  
+  // Check if URL has an image extension
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+  return imageExtensions.some(ext => url.toLowerCase().endsWith(ext)) || 
+         url.startsWith('data:image/');
+}
