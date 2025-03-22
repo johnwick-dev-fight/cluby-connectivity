@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import CreatePostDialog from '@/components/community/CreatePostDialog';
 import PostFilters from '@/components/community/PostFilters';
-import { getInitials, formatRelativeTime } from '@/lib/utils';
+import { getInitials, formatRelativeTime, createFlagNotificationMessage } from '@/lib/utils';
 
 interface PostAuthor {
   full_name: string;
@@ -297,9 +297,12 @@ const Community = () => {
   };
   
   const handleFlagPost = async () => {
-    if (!selectedPostId) return;
+    if (!selectedPostId || !user) return;
     
     try {
+      const post = posts.find(p => p.id === selectedPostId);
+      if (!post) return;
+      
       const { error } = await supabase
         .from('posts')
         .update({ 
@@ -309,6 +312,20 @@ const Community = () => {
         
       if (error) {
         throw error;
+      }
+      
+      if (post.club_id) {
+        const { data: clubData } = await supabase
+          .from('clubs')
+          .select('representative_id')
+          .eq('id', post.club_id)
+          .single();
+          
+        if (clubData && clubData.representative_id) {
+          console.log(`Notification for club rep ${clubData.representative_id}: Post "${post.title}" has been flagged`);
+        }
+      } else if (post.author_id) {
+        console.log(`Notification for user ${post.author_id}: Post "${post.title}" has been flagged`);
       }
       
       toast({
@@ -707,10 +724,6 @@ const PostCard: React.FC<PostCardProps> = ({
   userRole,
   postTypeIcon
 }) => {
-  const formatDate = (dateString: string) => {
-    return formatRelativeTime(dateString);
-  };
-  
   const isOwner = post.author_id === currentUserId;
   const isAdmin = userRole === 'admin';
   const canModify = isOwner || isAdmin;
@@ -748,7 +761,7 @@ const PostCard: React.FC<PostCardProps> = ({
                 )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {formatDate(post.created_at)}
+                {formatRelativeTime(post.created_at)}
               </p>
             </div>
           </div>
