@@ -42,19 +42,22 @@ const ProtectedRoute = ({ children, allowedRoles = [] }: { children: React.React
   
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center h-screen bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Checking authentication...</p>
       </div>
     );
   }
   
   // If no user is logged in, redirect to auth
   if (!user) {
+    console.log("Protected route: User not authenticated, redirecting to auth");
     return <Navigate to="/auth" replace />;
   }
   
   // If roles are specified and user role doesn't match, redirect to dashboard
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    console.log(`Protected route: User role '${user.role}' not allowed, redirecting to dashboard`);
     return <Navigate to="/dashboard" replace />;
   }
   

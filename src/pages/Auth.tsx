@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,22 +11,43 @@ import { toast } from '@/components/ui/use-toast';
 const Auth = () => {
   const navigate = useNavigate();
   const { user, isLoading, session } = useAuth();
-  const [activeTab, setActiveTab] = React.useState('login');
+  const [activeTab, setActiveTab] = useState('login');
+  const [pageLoading, setPageLoading] = useState(true);
   
   console.log("Auth component rendering with user:", user?.email, "loading:", isLoading, "session:", session?.user?.email);
   
   // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (user && !isLoading) {
-      console.log("User is authenticated, redirecting to dashboard");
-      navigate('/dashboard');
-    }
+    const checkAuth = async () => {
+      try {
+        // Wait for auth status to be determined
+        if (!isLoading) {
+          console.log("Auth status determined, user:", user?.email);
+          if (user) {
+            console.log("User is authenticated, redirecting to dashboard");
+            navigate('/dashboard');
+          }
+          setPageLoading(false);
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+        setPageLoading(false);
+        toast({
+          title: "Authentication Error",
+          description: "There was a problem verifying your authentication status. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    checkAuth();
   }, [user, isLoading, navigate]);
 
-  if (isLoading) {
+  if (isLoading || pageLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 dark:bg-gray-900">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading authentication...</p>
       </div>
     );
   }

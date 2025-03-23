@@ -70,6 +70,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       } else if (supabaseUser.user_metadata?.role === 'clubRepresentative') {
         console.log("Setting role as clubRepresentative based on metadata");
         role = 'clubRepresentative';
+      } else if (supabaseUser.email?.includes('club_rep')) {
+        console.log("Setting role as clubRepresentative based on email");
+        role = 'clubRepresentative';
       } else {
         // Fallback check for club representatives
         try {
@@ -77,12 +80,12 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             .from('clubs')
             .select('representative_id')
             .eq('representative_id', supabaseUser.id)
-            .single();
+            .maybeSingle();
             
           if (clubRep && !error) {
             console.log("Setting role as clubRepresentative based on clubs table");
             role = 'clubRepresentative';
-          } else if (error) {
+          } else if (error && error.code !== 'PGRST116') {
             console.log("Error checking club representative:", error.message);
           }
         } catch (error) {
@@ -93,11 +96,12 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       // Get user profile
       let profile: Profile | undefined;
       try {
+        console.log("Fetching profile for user ID:", supabaseUser.id);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', supabaseUser.id)
-          .single();
+          .maybeSingle();
         
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching profile:', error);
@@ -195,10 +199,18 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       setSession(session);
       
       if (session?.user) {
-        const userData = await fetchUserProfile(session.user);
-        setUser(userData);
+        try {
+          const userData = await fetchUserProfile(session.user);
+          setUser(userData);
+        } catch (err) {
+          console.error("Error setting user data:", err);
+          // Don't set user if there was an error
+        }
       }
       
+      setIsLoading(false);
+    }).catch(error => {
+      console.error("Error getting session:", error);
       setIsLoading(false);
     });
 
