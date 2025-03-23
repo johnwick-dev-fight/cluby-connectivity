@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface LoginFormProps {
   onRegisterClick: () => void;
@@ -71,9 +72,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
         <CardTitle className="text-2xl font-bold dark:text-white">Sign in</CardTitle>
         <CardDescription className="dark:text-gray-400">Enter your credentials to access your account</CardDescription>
         {error && (
-          <div className="p-3 mt-2 bg-red-100 border border-red-400 text-red-700 rounded dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mt-3">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
       </CardHeader>
       <CardContent>
@@ -130,10 +133,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
             )}
           </Button>
           <div className="text-sm text-center text-gray-500 dark:text-gray-400">
-            <p>Test account credentials:</p>
-            <p>Admin: admin@cluby.com / password123</p>
-            <p>Club Rep: club_rep@gmail.com / password123</p>
-            <p>Student: student1@gmail.com / password123</p>
+            <p>Test accounts for development:</p>
+            <p className="mt-1">For first-time login, please register a new account.</p>
+            <p className="mt-1">Or use the Register form to create an account with:</p>
+            <p>Email: user@example.com</p>
+            <p>Password: password123</p>
           </div>
         </form>
       </CardContent>

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface RegisterFormProps {
   onLoginClick: () => void;
@@ -23,6 +24,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -30,9 +32,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     // Basic validation
     if (!name || !email || !password || !confirmPassword) {
+      setError("Please fill in all fields");
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -42,6 +46,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
     }
     
     if (password !== confirmPassword) {
+      setError("Passwords do not match");
       toast({
         title: "Error",
         description: "Passwords do not match",
@@ -53,6 +58,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
     setIsSubmitting(true);
     
     try {
+      console.log("Registration attempt with:", email, role);
       await register(name, email, password, role);
       toast({
         title: "Success",
@@ -60,9 +66,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
       });
       navigate('/dashboard');
     } catch (error) {
+      console.error("Registration error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to register";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to register",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -75,6 +84,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onLoginClick }) => {
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold dark:text-white">Create an account</CardTitle>
         <CardDescription className="dark:text-gray-400">Enter your information to create your account</CardDescription>
+        {error && (
+          <Alert variant="destructive" className="mt-3">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

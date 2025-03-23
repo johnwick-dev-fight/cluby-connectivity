@@ -53,47 +53,101 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // Function to fetch user profile and set user state
   const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
     try {
+      console.log("Fetching user profile for:", supabaseUser.email);
+      
       // Define the default role
       let role: UserRole = 'student';
       
       // Check for admin email first (most reliable method)
-      if (supabaseUser.email === 'admin@cluby.com') {
+      if (supabaseUser.email?.includes('admin')) {
+        console.log("Setting role as admin based on email");
         role = 'admin';
       } 
       // Then check user metadata
       else if (supabaseUser.user_metadata?.role === 'admin') {
+        console.log("Setting role as admin based on metadata");
         role = 'admin';
       } else if (supabaseUser.user_metadata?.role === 'clubRepresentative') {
+        console.log("Setting role as clubRepresentative based on metadata");
         role = 'clubRepresentative';
       } else {
         // Fallback check for club representatives
-        const { data: clubRep } = await supabase
-          .from('clubs')
-          .select('representative_id')
-          .eq('representative_id', supabaseUser.id)
-          .single();
-          
-        if (clubRep) {
-          role = 'clubRepresentative';
+        try {
+          const { data: clubRep, error } = await supabase
+            .from('clubs')
+            .select('representative_id')
+            .eq('representative_id', supabaseUser.id)
+            .single();
+            
+          if (clubRep && !error) {
+            console.log("Setting role as clubRepresentative based on clubs table");
+            role = 'clubRepresentative';
+          } else if (error) {
+            console.log("Error checking club representative:", error.message);
+          }
+        } catch (error) {
+          console.error("Error checking club representative:", error);
         }
       }
       
       // Get user profile
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
+      let profile: Profile | undefined;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching profile:', error);
+        } else if (data) {
+          console.log("Found profile:", data);
+          profile = data;
+        } else {
+          console.log("No profile found, will create one");
+          // If no profile exists, create one
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({ 
+              id: supabaseUser.id, 
+              full_name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+            
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+          } else {
+            // Fetch the newly created profile
+            const { data: newProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', supabaseUser.id)
+              .single();
+              
+            if (newProfile) {
+              console.log("Created new profile:", newProfile);
+              profile = newProfile;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error in profile fetch/create process:', error);
       }
+      
+      console.log("Final user data:", {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        role,
+        profile
+      });
       
       return {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         role,
-        profile: profile || undefined
+        profile
       };
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -118,6 +172,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // Initial session check
   useEffect(() => {
     setIsLoading(true);
+    console.log("Setting up authentication system...");
     
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -157,14 +212,19 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log("Login attempt for:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Login error:", error);
+        throw error;
+      }
       
       if (data.user) {
+        console.log("Login successful for:", data.user.email);
         const userData = await fetchUserProfile(data.user);
         setUser(userData);
         setSession(data.session);
@@ -174,6 +234,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
       }
     } catch (error: any) {
+      console.error("Login exception:", error);
       toast({
         title: "Login failed",
         description: error.message || "Invalid credentials. Please try again.",
@@ -208,6 +269,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const register = async (name: string, email: string, password: string, role: UserRole) => {
     setIsLoading(true);
     try {
+      console.log("Registration attempt for:", email, "with role:", role);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -227,18 +289,25 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       });
       
       if (data.user) {
-        // Create profile manually if trigger doesn't work
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({ 
-            id: data.user.id, 
-            full_name: name,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
+        console.log("Registration successful for:", data.user.email);
+        // Create profile manually since we need to ensure it exists
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({ 
+              id: data.user.id, 
+              full_name: name,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+            
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+          } else {
+            console.log("Profile created successfully");
+          }
+        } catch (profileError) {
+          console.error('Exception creating profile:', profileError);
         }
         
         const userData = await fetchUserProfile(data.user);
@@ -246,6 +315,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setSession(data.session);
       }
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Registration failed",
         description: error.message || "Something went wrong. Please try again.",
