@@ -171,6 +171,7 @@ const CreatePostDialog: React.FC<CreatePostDialogProps> = ({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      <Button onClick={() => onOpenChange(true)}>Create Post</Button>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create a New Post</DialogTitle>

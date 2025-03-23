@@ -1,11 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import PostFilters from '@/components/community/PostFilters';
-import CreatePostDialog from '@/components/community/CreatePostDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import PostNotFound from '@/components/errors/PostNotFound';
 import { Loader2, MessageSquare, ThumbsUp, User, CalendarIcon, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Create new components for better organization
+import PostNotFound from '@/components/errors/PostNotFound';
+import PostFilters from '@/components/community/PostFilters';
+import CreatePostDialog from '@/components/community/CreatePostDialog';
 
 // Helper function to fetch post author and club details
 const fetchPostMetadata = async (postData: any[]) => {
@@ -71,23 +74,23 @@ const Community = () => {
       
       // Apply filters
       if (filter === 'clubs' && user) {
-        // Only show posts from clubs the user follows
-        const { data: followedClubs } = await supabase
-          .from('club_followers')
+        // We need to check club memberships instead, since club_followers doesn't exist
+        const { data: memberships } = await supabase
+          .from('club_members')
           .select('club_id')
           .eq('user_id', user.id);
         
-        if (followedClubs && followedClubs.length > 0) {
-          const clubIds = followedClubs.map(fc => fc.club_id);
+        if (memberships && memberships.length > 0) {
+          const clubIds = memberships.map(member => member.club_id);
           query = query.in('club_id', clubIds);
         } else {
-          // If user doesn't follow any clubs, return empty array
+          // If user doesn't belong to any clubs, return empty array
           return [];
         }
       } else if (filter === 'events') {
-        query = query.eq('type', 'event');
+        query = query.eq('post_type', 'event');
       } else if (filter === 'announcements') {
-        query = query.eq('type', 'announcement');
+        query = query.eq('post_type', 'announcement');
       }
       
       // Apply search if provided
@@ -120,7 +123,11 @@ const Community = () => {
     setSearch(newSearch);
   };
   
-  const renderPostContent = (post: any) => {
+  const handleRefetch = () => {
+    refetch();
+  };
+  
+  const renderPostContent = () => {
     if (isLoading) {
       return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -146,8 +153,11 @@ const Community = () => {
     if (isError) {
       return (
         <div className="flex flex-col items-center justify-center h-48">
-          <PostNotFound message="Failed to load posts. Please try again." />
-          <Button onClick={refetch} className="mt-4">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-2">Failed to load posts</h3>
+            <p className="text-muted-foreground mb-4">Please try again.</p>
+          </div>
+          <Button onClick={handleRefetch} className="mt-4">
             Retry
           </Button>
         </div>
@@ -157,7 +167,10 @@ const Community = () => {
     if (!posts || posts.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-48">
-          <PostNotFound message="No posts found with the current filters." />
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-2">No posts found</h3>
+            <p className="text-muted-foreground">No posts found with the current filters.</p>
+          </div>
         </div>
       );
     }
@@ -210,8 +223,8 @@ const Community = () => {
                   <MessageSquare className="h-4 w-4 mr-2" /> Comment
                 </Button>
               </div>
-              {post.type && (
-                <Badge variant="secondary">{post.type}</Badge>
+              {post.post_type && (
+                <Badge variant="secondary">{post.post_type}</Badge>
               )}
             </CardFooter>
           </Card>
@@ -220,21 +233,34 @@ const Community = () => {
     );
   };
 
+  const handlePostCreated = () => {
+    toast({
+      title: "Post created",
+      description: "Your post has been created successfully",
+    });
+    refetch();
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Community</h1>
-        <CreatePostDialog onSuccess={() => {
-          toast({
-            title: "Post created",
-            description: "Your post has been created successfully",
-          });
-          refetch();
-        }} />
+        <CreatePostDialog open={false} onOpenChange={() => {}} onPostCreated={handlePostCreated} />
       </div>
-      <PostFilters onFilterChange={handleFilterChange} onSearchChange={handleSearchChange} />
+      <PostFilters 
+        filters={{ search: search, postType: filter, author: '', tags: [] }}
+        onFilterChange={(key, value) => {
+          if (key === 'search') handleSearchChange(value);
+          if (key === 'postType') handleFilterChange(value);
+        }}
+        onClearFilters={() => {
+          setSearch('');
+          setFilter('all');
+        }}
+        userRole={user?.role as 'student' | 'clubRepresentative' | 'admin' || 'student'}
+      />
       <div className="mt-6">
-        {renderPostContent(posts)}
+        {renderPostContent()}
       </div>
     </div>
   );

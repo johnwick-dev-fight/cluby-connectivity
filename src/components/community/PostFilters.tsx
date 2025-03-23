@@ -73,7 +73,7 @@ const PostFilters: React.FC<PostFiltersProps> = ({
               <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All types</SelectItem>
+              <SelectItem value="all">All types</SelectItem>
               <SelectItem value="event">Event</SelectItem>
               <SelectItem value="job">Job Opening</SelectItem>
               <SelectItem value="achievement">Achievement</SelectItem>
@@ -146,13 +146,13 @@ const PostFilters: React.FC<PostFiltersProps> = ({
                 </Badge>
               )}
               
-              {filters.postType && (
+              {filters.postType && filters.postType !== 'all' && (
                 <Badge variant="outline" className="flex gap-1 items-center bg-background">
                   Type: {filters.postType}
                   <X 
                     size={14} 
                     className="cursor-pointer" 
-                    onClick={() => onFilterChange('postType', '')}
+                    onClick={() => onFilterChange('postType', 'all')}
                   />
                 </Badge>
               )}
