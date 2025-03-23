@@ -18,6 +18,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -25,8 +26,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!email || !password) {
+      setError("Please enter both email and password");
       toast({
         title: "Error",
         description: "Please enter both email and password",
@@ -38,16 +41,21 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
     setIsSubmitting(true);
     
     try {
+      console.log("Attempting login with:", email);
       await login(email, password);
+      console.log("Login successful, redirecting...");
       toast({
         title: "Success",
         description: "You have been logged in successfully",
       });
       navigate('/dashboard');
     } catch (error) {
+      console.error("Login failed:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to login";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to login",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -62,6 +70,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold dark:text-white">Sign in</CardTitle>
         <CardDescription className="dark:text-gray-400">Enter your credentials to access your account</CardDescription>
+        {error && (
+          <div className="p-3 mt-2 bg-red-100 border border-red-400 text-red-700 rounded dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
+            {error}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -116,6 +129,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
               </>
             )}
           </Button>
+          <div className="text-sm text-center text-gray-500 dark:text-gray-400">
+            <p>Test account credentials:</p>
+            <p>Admin: admin@cluby.com / password123</p>
+            <p>Club Rep: club_rep@gmail.com / password123</p>
+            <p>Student: student1@gmail.com / password123</p>
+          </div>
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">

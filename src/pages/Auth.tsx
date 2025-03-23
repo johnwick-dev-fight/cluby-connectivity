@@ -6,15 +6,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { Loader2 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, session } = useAuth();
   const [activeTab, setActiveTab] = React.useState('login');
+  
+  console.log("Auth component rendering with user:", user?.email, "loading:", isLoading, "session:", session?.user?.email);
   
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (user && !isLoading) {
+      console.log("User is authenticated, redirecting to dashboard");
       navigate('/dashboard');
     }
   }, [user, isLoading, navigate]);
