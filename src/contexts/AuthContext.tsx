@@ -110,34 +110,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           profile = data;
         } else {
           console.log("No profile found, will create one");
-          // If no profile exists, create one
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({ 
-              id: supabaseUser.id, 
-              full_name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-            
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-          } else {
-            // Fetch the newly created profile
-            const { data: newProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', supabaseUser.id)
-              .single();
-              
-            if (newProfile) {
-              console.log("Created new profile:", newProfile);
-              profile = newProfile;
-            }
-          }
+          // Creating a profile is now handled by the database trigger
+          // If no profile exists, just return the user without a profile
         }
       } catch (error) {
-        console.error('Error in profile fetch/create process:', error);
+        console.error('Error in profile fetch process:', error);
       }
       
       console.log("Final user data:", {
@@ -274,6 +251,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
+      console.error("Logout error:", error);
     }
   };
 
@@ -302,26 +280,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       
       if (data.user) {
         console.log("Registration successful for:", data.user.email);
-        // Create profile manually since we need to ensure it exists
-        try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({ 
-              id: data.user.id, 
-              full_name: name,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-            
-          if (profileError) {
-            console.error('Error creating profile:', profileError);
-          } else {
-            console.log("Profile created successfully");
-          }
-        } catch (profileError) {
-          console.error('Exception creating profile:', profileError);
-        }
-        
+        // The profile will be created by the database trigger
         const userData = await fetchUserProfile(data.user);
         setUser(userData);
         setSession(data.session);

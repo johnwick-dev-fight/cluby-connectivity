@@ -10,17 +10,14 @@ import { toast } from '@/components/ui/use-toast';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, isLoading, session } = useAuth();
+  const { user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [pageLoading, setPageLoading] = useState(true);
-  
-  console.log("Auth component rendering with user:", user?.email, "loading:", isLoading, "session:", session?.user?.email);
   
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Wait for auth status to be determined
         if (!isLoading) {
           console.log("Auth status determined, user:", user?.email);
           if (user) {
