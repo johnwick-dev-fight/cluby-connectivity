@@ -1,267 +1,268 @@
 
-import React, { useEffect, useState } from 'react';
-import { useQuery, RefetchOptions, QueryObserverResult } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, MessageSquare, ThumbsUp, User, CalendarIcon, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-
-// Create new components for better organization
-import PostNotFound from '@/components/errors/PostNotFound';
-import PostFilters from '@/components/community/PostFilters';
 import CreatePostDialog from '@/components/community/CreatePostDialog';
+import PostFilters from '@/components/community/PostFilters';
+import { toast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Helper function to fetch post author and club details
-const fetchPostMetadata = async (postData: any[]) => {
-  if (!postData || postData.length === 0) return [];
-  
-  // Get unique user IDs and club IDs from posts
-  const userIds = [...new Set(postData.map(post => post.author_id))];
-  const clubIds = [...new Set(postData.filter(post => post.club_id).map(post => post.club_id))];
-  
-  // Fetch user profiles
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, full_name, avatar_url')
-    .in('id', userIds);
-  
-  // Fetch clubs
-  const { data: clubs } = await supabase
-    .from('clubs')
-    .select('id, name, logo_url')
-    .in('id', clubIds);
-  
-  // Map profiles and clubs to posts
-  return postData.map(post => {
-    const author = profiles?.find(profile => profile.id === post.author_id);
-    const club = post.club_id ? clubs?.find(club => club.id === post.club_id) : null;
-    
-    return {
-      ...post,
-      author: author || { full_name: 'Unknown User' },
-      club: club || null
-    };
-  });
-};
+interface PostType {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  image_url: string | null;
+  club_id: string;
+  author_id: string;
+  post_type: string;
+  club: {
+    name: string;
+    logo_url: string | null;
+  };
+  author: {
+    full_name: string | null;
+    avatar_url: string | null;
+  };
+  _count?: {
+    likes: number;
+    comments: number;
+  };
+}
+
+interface PostFiltersProps {
+  activeFilter: string;
+  searchTerm: string;
+  onFilterChange: (filter: string) => void;
+  onSearchChange: (search: string) => void;
+}
+
+interface PostNotFoundProps {
+  message: string;
+}
+
+const PostNotFound: React.FC<PostNotFoundProps> = ({ message }) => (
+  <Alert variant="destructive" className="mb-6">
+    <AlertCircle className="h-4 w-4" />
+    <AlertTitle>No posts found</AlertTitle>
+    <AlertDescription>{message}</AlertDescription>
+  </Alert>
+);
 
 const Community = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [filter, setFilter] = useState<string>('all');
-  const [search, setSearch] = useState<string>('');
-  
-  // Post fetching query
-  const {
-    data: posts,
-    isLoading,
-    isError,
-    refetch
-  } = useQuery({
-    queryKey: ['community-posts', filter, search],
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Fetch posts with proper club and author details
+  const { data: posts, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['posts', activeFilter, searchTerm],
     queryFn: async () => {
-      console.log('Fetching posts with filter:', filter, 'and search:', search);
-      
       let query = supabase
         .from('posts')
-        .select('*')
+        .select(`
+          *,
+          club:club_id(name, logo_url),
+          author:author_id(full_name, avatar_url)
+        `)
         .order('created_at', { ascending: false });
-      
-      // Apply filters
-      if (filter === 'clubs' && user) {
-        // We need to check club memberships instead, since club_followers doesn't exist
-        const { data: memberships } = await supabase
-          .from('club_members')
-          .select('club_id')
-          .eq('user_id', user.id);
-        
-        if (memberships && memberships.length > 0) {
-          const clubIds = memberships.map(member => member.club_id);
-          query = query.in('club_id', clubIds);
-        } else {
-          // If user doesn't belong to any clubs, return empty array
-          return [];
+
+      // Apply filter
+      if (activeFilter !== 'all') {
+        if (activeFilter === 'following') {
+          // Get clubs the user is following/member of
+          const { data: followedClubs } = await supabase
+            .from('club_members')
+            .select('club_id')
+            .eq('user_id', user?.id)
+            .eq('status', 'approved');
+
+          if (followedClubs && followedClubs.length > 0) {
+            const clubIds = followedClubs.map(fc => fc.club_id);
+            query = query.in('club_id', clubIds);
+          } else {
+            // No followed clubs, return empty array
+            return [];
+          }
+        } else if (activeFilter === 'events') {
+          query = query.eq('post_type', 'event');
+        } else if (activeFilter === 'announcements') {
+          query = query.eq('post_type', 'announcement');
         }
-      } else if (filter === 'events') {
-        query = query.eq('post_type', 'event');
-      } else if (filter === 'announcements') {
-        query = query.eq('post_type', 'announcement');
       }
-      
-      // Apply search if provided
-      if (search) {
-        query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+
+      // Apply search term
+      if (searchTerm) {
+        query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`);
       }
-      
+
       const { data, error } = await query;
       
       if (error) {
-        console.error('Error fetching posts:', error);
-        throw new Error(error.message);
+        throw error;
       }
-      
-      if (!data || data.length === 0) {
-        return [];
+
+      // Calculate counts for likes and comments
+      if (data) {
+        const postsWithCounts = await Promise.all(
+          data.map(async (post) => {
+            // Get like count
+            const { count: likeCount } = await supabase
+              .from('post_likes')
+              .select('*', { count: 'exact' })
+              .eq('post_id', post.id);
+
+            // Get comment count
+            const { count: commentCount } = await supabase
+              .from('comments')
+              .select('*', { count: 'exact' })
+              .eq('post_id', post.id);
+
+            return {
+              ...post,
+              _count: {
+                likes: likeCount || 0,
+                comments: commentCount || 0
+              }
+            };
+          })
+        );
+
+        return postsWithCounts;
       }
-      
-      // Fetch additional metadata (author, club)
-      return await fetchPostMetadata(data);
-    },
-    staleTime: 60 * 1000, // 1 minute
+
+      return [];
+    }
   });
 
   const handleFilterChange = (newFilter: string) => {
-    setFilter(newFilter);
+    setActiveFilter(newFilter);
   };
-  
+
   const handleSearchChange = (newSearch: string) => {
-    setSearch(newSearch);
+    setSearchTerm(newSearch);
   };
-  
-  const handleRefetch = () => {
+
+  const handlePostSuccess = () => {
+    setIsDialogOpen(false);
+    // Refetch posts to show the new one
     refetch();
+    toast({
+      title: "Post created",
+      description: "Your post has been published successfully!"
+    });
   };
-  
-  const renderPostContent = () => {
-    if (isLoading) {
-      return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="shadow-md">
-              <CardHeader>
-                <CardTitle><Skeleton className="h-5 w-4/5" /></CardTitle>
-                <CardDescription><Skeleton className="h-4 w-3/5" /></CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-20 w-full" />
-                <div className="mt-4 flex justify-between items-center">
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <Skeleton className="h-4 w-16" />
+
+  return (
+    <div className="container max-w-4xl mx-auto py-8 px-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Community</h1>
+          <p className="text-muted-foreground">
+            Stay updated with the latest posts from college clubs
+          </p>
+        </div>
+        
+        {user && (
+          <Button onClick={() => setIsDialogOpen(true)}>
+            Create Post
+          </Button>
+        )}
+      </div>
+
+      <div className="mb-8">
+        <PostFilters 
+          activeFilter={activeFilter}
+          searchTerm={searchTerm}
+          onFilterChange={handleFilterChange}
+          onSearchChange={handleSearchChange}
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading posts...</span>
+        </div>
+      ) : isError ? (
+        <div className="text-center py-10">
+          <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-medium">Error loading posts</h3>
+          <p className="text-muted-foreground mt-2">{error?.message || "An unexpected error occurred"}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4" 
+            onClick={() => refetch()}
+          >
+            Try Again
+          </Button>
+        </div>
+      ) : posts && posts.length > 0 ? (
+        <div className="space-y-6">
+          {posts.map((post: PostType) => (
+            <Card key={post.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <Avatar className="h-10 w-10 mr-3">
+                    <AvatarImage src={post.club.logo_url || ''} alt={post.club.name} />
+                    <AvatarFallback>{post.club.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-medium leading-none">{post.club.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(post.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                
+                <h2 className="text-xl font-bold mb-2">{post.title}</h2>
+                <p className="text-muted-foreground mb-4">{post.content}</p>
+                
+                {post.image_url && (
+                  <div className="mb-4 overflow-hidden rounded-md">
+                    <img 
+                      src={post.image_url} 
+                      alt={post.title} 
+                      className="w-full h-auto object-cover max-h-[400px]" 
+                    />
+                  </div>
+                )}
+                
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <span className="mr-4">{post._count?.likes || 0} likes</span>
+                  <span>{post._count?.comments || 0} comments</span>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      );
-    }
-    
-    if (isError) {
-      return (
-        <div className="flex flex-col items-center justify-center h-48">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">Failed to load posts</h3>
-            <p className="text-muted-foreground mb-4">Please try again.</p>
-          </div>
-          <Button onClick={handleRefetch} className="mt-4">
-            Retry
-          </Button>
-        </div>
-      );
-    }
-    
-    if (!posts || posts.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-48">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">No posts found</h3>
-            <p className="text-muted-foreground">No posts found with the current filters.</p>
-          </div>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {posts.map((post) => (
-          <Card key={post.id} className="shadow-md">
-            <CardHeader>
-              <CardTitle>{post.title}</CardTitle>
-              <CardDescription>{post.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p>{post.content.substring(0, 100)}...</p>
-              {post.club && (
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-6 w-6">
-                    {post.club.logo_url ? (
-                      <AvatarImage src={post.club.logo_url} alt={post.club.name} />
-                    ) : (
-                      <AvatarFallback>{post.club.name.substring(0, 2)}</AvatarFallback>
-                    )}
-                  </Avatar>
-                  <span className="text-sm font-medium leading-none">{post.club.name}</span>
-                </div>
-              )}
-              <div className="flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span className="text-sm">{post.author?.full_name || 'Unknown User'}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CalendarIcon className="h-4 w-4" />
-                <span className="text-sm">
-                  {format(new Date(post.created_at), 'MMM dd, yyyy')}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm">
-                  {format(new Date(post.created_at), 'hh:mm a')}
-                </span>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between items-center">
-              <div className="flex items-center space-x-3">
-                <Button variant="ghost" size="sm">
-                  <ThumbsUp className="h-4 w-4 mr-2" /> Like
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <MessageSquare className="h-4 w-4 mr-2" /> Comment
-                </Button>
-              </div>
-              {post.post_type && (
-                <Badge variant="secondary">{post.post_type}</Badge>
-              )}
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-    );
-  };
+      ) : (
+        <PostNotFound 
+          message={
+            searchTerm 
+              ? `No posts found matching "${searchTerm}". Try a different search term.` 
+              : activeFilter !== 'all' 
+                ? `No posts found with the "${activeFilter}" filter.` 
+                : "No posts found. Be the first to create a post!"
+          } 
+        />
+      )}
 
-  const handlePostCreated = () => {
-    toast({
-      title: "Post created",
-      description: "Your post has been created successfully",
-    });
-    refetch();
-  };
-
-  return (
-    <div className="container mx-auto py-8">
-      <div className="mb-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Community</h1>
-        <CreatePostDialog open={false} onOpenChange={() => {}} onPostCreated={handlePostCreated} />
-      </div>
-      <PostFilters 
-        filters={{ search: search, postType: filter, author: '', tags: [] }}
-        onFilterChange={(key, value) => {
-          if (key === 'search') handleSearchChange(value);
-          if (key === 'postType') handleFilterChange(value);
-        }}
-        onClearFilters={() => {
-          setSearch('');
-          setFilter('all');
-        }}
-        userRole={user?.role as 'student' | 'clubRepresentative' | 'admin' || 'student'}
+      <CreatePostDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen}
+        onSuccess={handlePostSuccess}
       />
-      <div className="mt-6">
-        {renderPostContent()}
-      </div>
     </div>
   );
 };
