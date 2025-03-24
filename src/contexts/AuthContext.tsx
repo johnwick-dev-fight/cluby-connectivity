@@ -1,6 +1,5 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { signIn, signUp, signOut, verifyToken, getUserProfile } from '@/lib/mongodb/services/userService';
 import { toast } from '@/components/ui/use-toast';
 
 export type UserRole = 'student' | 'clubRepresentative' | 'admin';
@@ -44,6 +43,72 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// Mock users for client-side authentication demo
+// In a real app, these would be stored in a database
+const MOCK_USERS = [
+  {
+    id: '1',
+    email: 'student1@gmail.com',
+    password: 'password123',
+    role: 'student' as UserRole,
+    profile: {
+      id: '1',
+      full_name: 'Student User',
+      avatar_url: '/avatar-placeholder.jpg',
+      department: 'Computer Science',
+      year: '2nd Year'
+    }
+  },
+  {
+    id: '2',
+    email: 'club_rep@gmail.com',
+    password: 'password123',
+    role: 'clubRepresentative' as UserRole,
+    profile: {
+      id: '2',
+      full_name: 'Club Representative',
+      avatar_url: '/avatar-placeholder.jpg'
+    }
+  },
+  {
+    id: '3',
+    email: 'admin@cluby.com',
+    password: 'password123',
+    role: 'admin' as UserRole,
+    profile: {
+      id: '3',
+      full_name: 'Admin User',
+      avatar_url: '/avatar-placeholder.jpg'
+    }
+  }
+];
+
+// Simulate JWT creation without actually using JWT
+const generateMockToken = (user: any) => {
+  return btoa(JSON.stringify({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    exp: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
+  }));
+};
+
+// Simulate JWT verification without actually using JWT
+const verifyMockToken = (token: string) => {
+  try {
+    const decoded = JSON.parse(atob(token));
+    
+    // Check if token is expired
+    if (decoded.exp < Date.now()) {
+      return { data: null, error: new Error('Token expired') };
+    }
+    
+    return { data: decoded, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
+
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<{ access_token: string } | null>(null);
@@ -57,7 +122,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       
       if (token) {
         try {
-          const { data, error } = await verifyToken(token);
+          const { data, error } = verifyMockToken(token);
           
           if (error || !data) {
             localStorage.removeItem('auth_token');
@@ -66,16 +131,22 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           } else {
             // Token is valid, set up user data
             const userData = data as any;
-            const profile = await getUserProfile(userData.id);
             
-            setUser({
-              id: userData.id,
-              email: userData.email,
-              role: userData.role,
-              profile: profile || undefined
-            });
+            // Find the user in our mock database
+            const mockUser = MOCK_USERS.find(u => u.id === userData.id) || MOCK_USERS.find(u => u.email === userData.email);
             
-            setSession({ access_token: token });
+            if (mockUser) {
+              setUser({
+                id: mockUser.id,
+                email: mockUser.email,
+                role: mockUser.role,
+                profile: mockUser.profile
+              });
+              
+              setSession({ access_token: token });
+            } else {
+              localStorage.removeItem('auth_token');
+            }
           }
         } catch (error) {
           console.error('Error verifying token:', error);
@@ -89,33 +160,26 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     checkAuth();
   }, []);
 
-  // Function to fetch user profile
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const profile = await getUserProfile(userId);
-      return profile;
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      return null;
-    }
-  };
-
   // Refresh user data
   const refreshUser = async () => {
     if (!session?.access_token) return;
     
     try {
-      const { data } = await verifyToken(session.access_token);
+      const { data } = verifyMockToken(session.access_token);
       if (data) {
         const userData = data as any;
-        const profile = await getUserProfile(userData.id);
         
-        setUser({
-          id: userData.id,
-          email: userData.email,
-          role: userData.role,
-          profile: profile || undefined
-        });
+        // Find the user in our mock database
+        const mockUser = MOCK_USERS.find(u => u.id === userData.id);
+        
+        if (mockUser) {
+          setUser({
+            id: mockUser.id,
+            email: mockUser.email,
+            role: mockUser.role,
+            profile: mockUser.profile
+          });
+        }
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
@@ -126,33 +190,35 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { user: authUser, session: authSession, error } = await signIn(email, password);
+      // Simulate network request delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (error) {
-        throw error;
+      // Find the user in our mock database
+      const user = MOCK_USERS.find(u => u.email === email);
+      
+      if (!user || user.password !== password) {
+        throw new Error('Invalid email or password');
       }
       
-      if (authUser && authSession) {
-        // Store the token
-        localStorage.setItem('auth_token', authSession.access_token);
-        
-        // Fetch user profile
-        const profile = await fetchUserProfile(authUser.id);
-        
-        setUser({
-          id: authUser.id,
-          email: authUser.email,
-          role: authUser.role,
-          profile: profile || undefined
-        });
-        
-        setSession(authSession);
-        
-        toast({
-          title: "Login successful",
-          description: `Welcome back${profile?.full_name ? ', ' + profile.full_name : ''}!`,
-        });
-      }
+      // Generate a mock token
+      const token = generateMockToken(user);
+      
+      // Store the token
+      localStorage.setItem('auth_token', token);
+      
+      setUser({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        profile: user.profile
+      });
+      
+      setSession({ access_token: token });
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome back${user.profile?.full_name ? ', ' + user.profile.full_name : ''}!`,
+      });
     } catch (error: any) {
       console.error("Login exception:", error);
       toast({
@@ -169,7 +235,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // Logout function
   const logout = async () => {
     try {
-      await signOut();
+      // Simulate network request delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       localStorage.removeItem('auth_token');
       setUser(null);
       setSession(null);
@@ -188,40 +256,58 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }
   };
 
-  // Register function
+  // Register function (simplified for client-side demo)
   const register = async (name: string, email: string, password: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      const { user: authUser, session: authSession, error } = await signUp(email, password, {
-        full_name: name,
-        role: role,
-      });
+      // Simulate network request delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      if (error) {
-        throw error;
+      // Check if user already exists
+      if (MOCK_USERS.find(u => u.email === email)) {
+        throw new Error('User with this email already exists');
       }
+      
+      // In a real app, we would call the API to create a user
+      // For this demo, we'll simulate a successful registration
+      
+      // Create a new mock user
+      const newUserId = String(MOCK_USERS.length + 1);
+      const newUser = {
+        id: newUserId,
+        email,
+        password,
+        role,
+        profile: {
+          id: newUserId,
+          full_name: name,
+          avatar_url: '/avatar-placeholder.jpg'
+        }
+      };
+      
+      // Add to our mock database (this is just for demo)
+      // In a real app, the user would be created in a database
+      MOCK_USERS.push(newUser);
+      
+      // Generate a token for the new user
+      const token = generateMockToken(newUser);
       
       toast({
         title: "Registration successful",
         description: "Welcome to Cluby! Your account has been created.",
       });
       
-      if (authUser && authSession) {
-        // Store the token
-        localStorage.setItem('auth_token', authSession.access_token);
-        
-        // Fetch user profile
-        const profile = await fetchUserProfile(authUser.id);
-        
-        setUser({
-          id: authUser.id,
-          email: authUser.email,
-          role: authUser.role,
-          profile: profile || undefined
-        });
-        
-        setSession(authSession);
-      }
+      // Store the token
+      localStorage.setItem('auth_token', token);
+      
+      setUser({
+        id: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+        profile: newUser.profile
+      });
+      
+      setSession({ access_token: token });
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({

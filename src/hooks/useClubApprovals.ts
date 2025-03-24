@@ -1,6 +1,5 @@
 
 import { useState, useCallback } from 'react';
-import { getPendingClubs, approveClub, rejectClub } from '@/lib/mongodb/services/clubService';
 import { toast } from '@/components/ui/use-toast';
 
 export interface Club {
@@ -11,6 +10,31 @@ export interface Club {
   status: 'pending' | 'approved' | 'rejected';
 }
 
+// Mock data for client-side demo
+const MOCK_PENDING_CLUBS: Club[] = [
+  {
+    id: '1',
+    name: 'Coding Club',
+    representative_id: '2',
+    description: 'A club for coding enthusiasts',
+    status: 'pending'
+  },
+  {
+    id: '2',
+    name: 'Photography Club',
+    representative_id: '2',
+    description: 'Capture memories through lenses',
+    status: 'pending'
+  },
+  {
+    id: '3',
+    name: 'Debate Club',
+    representative_id: '2',
+    description: 'Enhance your public speaking skills',
+    status: 'pending'
+  }
+];
+
 export const useClubApprovals = () => {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,13 +42,10 @@ export const useClubApprovals = () => {
   const fetchPendingClubs = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await getPendingClubs();
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      if (error) {
-        throw error;
-      }
-      
-      setClubs(data || []);
+      setClubs(MOCK_PENDING_CLUBS);
     } catch (error) {
       console.error('Error fetching pending clubs:', error);
       toast({
@@ -39,11 +60,8 @@ export const useClubApprovals = () => {
 
   const approveClubAction = useCallback(async (clubId: string) => {
     try {
-      const { data, error } = await approveClub(clubId);
-      
-      if (error) {
-        throw error;
-      }
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Update local clubs state
       setClubs(prevClubs => prevClubs.filter(club => club.id !== clubId));
@@ -64,11 +82,8 @@ export const useClubApprovals = () => {
 
   const rejectClubAction = useCallback(async (clubId: string) => {
     try {
-      const { data, error } = await rejectClub(clubId);
-      
-      if (error) {
-        throw error;
-      }
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Update local clubs state
       setClubs(prevClubs => prevClubs.filter(club => club.id !== clubId));

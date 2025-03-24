@@ -1,110 +1,83 @@
 
-import Post from '../models/Post';
-import Club from '../models/Club';
-import User from '../models/User';
-import Profile from '../models/Profile';
-import dbConnect from '../db';
-import mongoose from 'mongoose';
-
-export async function getPosts(query = {}) {
-  await dbConnect();
-  
-  try {
-    const posts = await Post.find(query)
-      .sort({ created_at: -1 })
-      .lean();
-    
-    // Fetch related club and author data
-    const postsWithDetails = await Promise.all(posts.map(async (post) => {
-      const club = await Club.findById(post.club_id).lean();
-      const profile = await Profile.findOne({ user_id: post.author_id }).lean();
-      
-      return {
-        ...post,
-        id: post._id.toString(),
-        club: {
-          name: club ? club.name : 'Unknown Club',
-          logo_url: club ? club.logo_url : null
-        },
-        author: profile ? {
-          full_name: profile.full_name || null,
-          avatar_url: profile.avatar_url || null
-        } : { error: true }
-      };
-    }));
-    
-    return { data: postsWithDetails, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
-}
-
-export async function getPostById(id: string) {
-  await dbConnect();
-  
-  try {
-    const post = await Post.findById(id).lean();
-    
-    if (!post) {
-      return { data: null, error: 'Post not found' };
-    }
-    
-    const club = await Club.findById(post.club_id).lean();
-    const profile = await Profile.findOne({ user_id: post.author_id }).lean();
-    
-    const postWithDetails = {
-      ...post,
-      id: post._id.toString(),
-      club: {
-        name: club ? club.name : 'Unknown Club',
-        logo_url: club ? club.logo_url : null
-      },
-      author: profile ? {
-        full_name: profile.full_name || null,
-        avatar_url: profile.avatar_url || null
-      } : { error: true }
-    };
-    
-    return { data: postWithDetails, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
-}
+// This file should be used in API routes only.
+// Since we're doing client-side authentication for now,
+// we'll leave this as a placeholder.
 
 export async function createPost(postData: any) {
-  await dbConnect();
-  
-  try {
-    const newPost = new Post(postData);
-    const savedPost = await newPost.save();
-    return { data: savedPost, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
+  console.warn('Server-side function called from client');
+  return { data: null, error: null };
 }
 
-export async function updatePost(id: string, postData: any) {
-  await dbConnect();
+export async function getAllPosts() {
+  console.warn('Server-side function called from client');
   
-  try {
-    const updatedPost = await Post.findByIdAndUpdate(
-      id,
-      { ...postData, updated_at: new Date() },
-      { new: true }
-    );
-    return { data: updatedPost, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
+  // Return mock data for demonstration purposes
+  return { 
+    data: [
+      {
+        _id: '1',
+        title: 'Welcome to Cluby',
+        content: 'Join us for the kickoff meeting of the new semester!',
+        club_id: '1',
+        author_id: '1',
+        created_at: new Date(),
+        updated_at: new Date(),
+        club: {
+          _id: '1',
+          name: 'Programming Club',
+          logo_url: '/avatar-placeholder.jpg'
+        },
+        author: {
+          _id: '1',
+          full_name: 'John Doe',
+          avatar_url: '/avatar-placeholder.jpg'
+        }
+      },
+      {
+        _id: '2',
+        title: 'Photography Contest',
+        content: 'Submit your best shots for a chance to win prizes!',
+        club_id: '2',
+        author_id: '2',
+        created_at: new Date(),
+        updated_at: new Date(),
+        club: {
+          _id: '2',
+          name: 'Photography Club',
+          logo_url: '/avatar-placeholder.jpg'
+        },
+        author: {
+          _id: '2',
+          full_name: 'Jane Smith',
+          avatar_url: '/avatar-placeholder.jpg'
+        }
+      }
+    ], 
+    error: null 
+  };
 }
 
-export async function deletePost(id: string) {
-  await dbConnect();
-  
-  try {
-    await Post.findByIdAndDelete(id);
-    return { error: null };
-  } catch (error) {
-    return { error };
-  }
+export async function getPostById(postId: string) {
+  console.warn('Server-side function called from client');
+  return { data: null, error: null };
+}
+
+export async function updatePost(postId: string, postData: any) {
+  console.warn('Server-side function called from client');
+  return { data: null, error: null };
+}
+
+export async function deletePost(postId: string) {
+  console.warn('Server-side function called from client');
+  return { data: null, error: null };
+}
+
+export async function getPostsByClubId(clubId: string) {
+  console.warn('Server-side function called from client');
+  return { data: [], error: null };
+}
+
+export async function getPostsByAuthorId(authorId: string) {
+  console.warn('Server-side function called from client');
+  return { data: [], error: null };
 }
