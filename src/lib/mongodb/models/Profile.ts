@@ -25,4 +25,5 @@ const ProfileSchema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
+// Check if model already exists (for development with hot reloading)
 export default mongoose.models.Profile || mongoose.model<ProfileDocument>('Profile', ProfileSchema);

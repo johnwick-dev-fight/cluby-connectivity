@@ -21,5 +21,5 @@ const UserSchema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Check if model already exists (to prevent model overwrite error in development)
+// Check if model already exists (for development with hot reloading)
 export default mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema);

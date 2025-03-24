@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import EmailInput from './inputs/EmailInput';
 import PasswordInput from './inputs/PasswordInput';
 import { toast } from '@/components/ui/use-toast';
@@ -58,17 +57,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
         <form onSubmit={handleSubmit}>
           <div className="grid gap-2">
             <EmailInput
-              id="email"
-              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="grid gap-2">
             <PasswordInput
-              id="password"
               label="Password"
-              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

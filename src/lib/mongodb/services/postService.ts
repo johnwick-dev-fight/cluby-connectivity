@@ -21,9 +21,10 @@ export async function getPosts(query = {}) {
       
       return {
         ...post,
+        id: post._id.toString(),
         club: {
-          name: club?.name || 'Unknown Club',
-          logo_url: club?.logo_url || null
+          name: club ? club.name : 'Unknown Club',
+          logo_url: club ? club.logo_url : null
         },
         author: profile ? {
           full_name: profile.full_name || null,
@@ -53,9 +54,10 @@ export async function getPostById(id: string) {
     
     const postWithDetails = {
       ...post,
+      id: post._id.toString(),
       club: {
-        name: club?.name || 'Unknown Club',
-        logo_url: club?.logo_url || null
+        name: club ? club.name : 'Unknown Club',
+        logo_url: club ? club.logo_url : null
       },
       author: profile ? {
         full_name: profile.full_name || null,

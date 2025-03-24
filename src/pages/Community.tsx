@@ -27,18 +27,11 @@ interface PostType {
   author: {
     full_name: string | null;
     avatar_url: string | null;
-  } | null | { error: boolean };
+  } | { error: boolean };
   _count?: {
     likes: number;
     comments: number;
   };
-}
-
-interface PostFiltersProps {
-  activeFilter: string;
-  searchTerm: string;
-  onFilterChange: (filter: string) => void;
-  onSearchChange: (search: string) => void;
 }
 
 interface PostNotFoundProps {
@@ -80,6 +73,7 @@ const Community = () => {
       const { data, error } = await getPosts(query);
       
       if (error) {
+        console.error('Error fetching posts:', error);
         throw error;
       }
       

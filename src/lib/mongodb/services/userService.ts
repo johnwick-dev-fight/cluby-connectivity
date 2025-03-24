@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import Profile from '../models/Profile';
 import dbConnect from '../db';
+import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -62,7 +63,7 @@ export async function signUp(email: string, password: string, userData: any): Pr
     
     return {
       user: {
-        id: savedUser._id,
+        id: savedUser._id.toString(),
         email: savedUser.email,
         role: savedUser.role
       },
@@ -71,6 +72,7 @@ export async function signUp(email: string, password: string, userData: any): Pr
       }
     };
   } catch (error) {
+    console.error('Sign up error:', error);
     return {
       user: null,
       session: null,
@@ -98,7 +100,7 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
     // Generate JWT token
     const token = jwt.sign(
       { 
-        id: user._id,
+        id: user._id.toString(),
         email: user.email,
         role: user.role
       },
@@ -108,7 +110,7 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
     
     return {
       user: {
-        id: user._id,
+        id: user._id.toString(),
         email: user.email,
         role: user.role
       },
@@ -117,6 +119,7 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
       }
     };
   } catch (error) {
+    console.error('Sign in error:', error);
     return {
       user: null,
       session: null,
@@ -129,9 +132,10 @@ export async function getUserProfile(userId: string) {
   await dbConnect();
   
   try {
-    const profile = await Profile.findOne({ user_id: userId });
+    const profile = await Profile.findOne({ user_id: new mongoose.Types.ObjectId(userId) });
     return profile;
   } catch (error) {
+    console.error('Get profile error:', error);
     throw error;
   }
 }

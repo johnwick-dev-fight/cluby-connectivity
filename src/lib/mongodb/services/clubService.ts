@@ -8,9 +8,17 @@ export async function getClubs(query = {}) {
   await dbConnect();
   
   try {
-    const clubs = await Club.find(query).sort({ created_at: -1 });
-    return { data: clubs, error: null };
+    const clubs = await Club.find(query).sort({ created_at: -1 }).lean();
+    
+    // Transform MongoDB _id to id for frontend compatibility
+    const transformedClubs = clubs.map(club => ({
+      ...club,
+      id: club._id.toString(),
+    }));
+    
+    return { data: transformedClubs, error: null };
   } catch (error) {
+    console.error('Get clubs error:', error);
     return { data: null, error };
   }
 }
@@ -19,9 +27,21 @@ export async function getClubById(id: string) {
   await dbConnect();
   
   try {
-    const club = await Club.findById(id);
-    return { data: club, error: null };
+    const club = await Club.findById(id).lean();
+    
+    if (!club) {
+      return { data: null, error: 'Club not found' };
+    }
+    
+    return { 
+      data: {
+        ...club,
+        id: club._id.toString()
+      }, 
+      error: null 
+    };
   } catch (error) {
+    console.error('Get club by ID error:', error);
     return { data: null, error };
   }
 }
@@ -32,8 +52,16 @@ export async function createClub(clubData: any) {
   try {
     const newClub = new Club(clubData);
     const savedClub = await newClub.save();
-    return { data: savedClub, error: null };
+    
+    return { 
+      data: {
+        ...savedClub.toObject(),
+        id: savedClub._id.toString()
+      }, 
+      error: null 
+    };
   } catch (error) {
+    console.error('Create club error:', error);
     return { data: null, error };
   }
 }
@@ -46,9 +74,21 @@ export async function updateClub(id: string, clubData: any) {
       id,
       { ...clubData, updated_at: new Date() },
       { new: true }
-    );
-    return { data: updatedClub, error: null };
+    ).lean();
+    
+    if (!updatedClub) {
+      return { data: null, error: 'Club not found' };
+    }
+    
+    return { 
+      data: {
+        ...updatedClub,
+        id: updatedClub._id.toString()
+      }, 
+      error: null 
+    };
   } catch (error) {
+    console.error('Update club error:', error);
     return { data: null, error };
   }
 }
@@ -57,9 +97,17 @@ export async function getPendingClubs() {
   await dbConnect();
   
   try {
-    const pendingClubs = await Club.find({ status: 'pending' });
-    return { data: pendingClubs, error: null };
+    const pendingClubs = await Club.find({ status: 'pending' }).lean();
+    
+    // Transform MongoDB _id to id for frontend compatibility
+    const transformedClubs = pendingClubs.map(club => ({
+      ...club,
+      id: club._id.toString(),
+    }));
+    
+    return { data: transformedClubs, error: null };
   } catch (error) {
+    console.error('Get pending clubs error:', error);
     return { data: null, error };
   }
 }
@@ -72,9 +120,21 @@ export async function approveClub(id: string) {
       id,
       { status: 'approved', updated_at: new Date() },
       { new: true }
-    );
-    return { data: club, error: null };
+    ).lean();
+    
+    if (!club) {
+      return { data: null, error: 'Club not found' };
+    }
+    
+    return { 
+      data: {
+        ...club,
+        id: club._id.toString()
+      }, 
+      error: null 
+    };
   } catch (error) {
+    console.error('Approve club error:', error);
     return { data: null, error };
   }
 }
@@ -87,9 +147,21 @@ export async function rejectClub(id: string) {
       id,
       { status: 'rejected', updated_at: new Date() },
       { new: true }
-    );
-    return { data: club, error: null };
+    ).lean();
+    
+    if (!club) {
+      return { data: null, error: 'Club not found' };
+    }
+    
+    return { 
+      data: {
+        ...club,
+        id: club._id.toString()
+      }, 
+      error: null 
+    };
   } catch (error) {
+    console.error('Reject club error:', error);
     return { data: null, error };
   }
 }

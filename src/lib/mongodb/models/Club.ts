@@ -31,4 +31,5 @@ const ClubSchema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
+// Check if model already exists (for development with hot reloading)
 export default mongoose.models.Club || mongoose.model<ClubDocument>('Club', ClubSchema);

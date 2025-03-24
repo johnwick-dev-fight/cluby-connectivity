@@ -23,15 +23,9 @@ export const useClubApprovals = () => {
       
       if (error) throw error;
       
-      // Transform MongoDB _id to id for compatibility
-      const formattedClubs = data.map((club: any) => ({
-        ...club,
-        id: club._id.toString(),
-        _id: undefined
-      }));
-      
-      setClubs(formattedClubs || []);
+      setClubs(data || []);
     } catch (error: any) {
+      console.error('Error fetching pending clubs:', error);
       toast({
         title: "Error fetching clubs",
         description: error.message || "Something went wrong",
@@ -50,15 +44,14 @@ export const useClubApprovals = () => {
       if (error) throw error;
       
       // Update local state
-      setClubs(clubs.map(club => 
-        club.id === clubId ? { ...club, status: 'approved' } : club
-      ));
+      setClubs(clubs.filter(club => club.id !== clubId));
       
       toast({
         title: "Club approved",
         description: "The club has been successfully approved.",
       });
     } catch (error: any) {
+      console.error('Error approving club:', error);
       toast({
         title: "Error approving club",
         description: error.message || "Something went wrong",
@@ -77,15 +70,14 @@ export const useClubApprovals = () => {
       if (error) throw error;
       
       // Update local state
-      setClubs(clubs.map(club => 
-        club.id === clubId ? { ...club, status: 'rejected' } : club
-      ));
+      setClubs(clubs.filter(club => club.id !== clubId));
       
       toast({
         title: "Club rejected",
         description: "The club has been rejected.",
       });
     } catch (error: any) {
+      console.error('Error rejecting club:', error);
       toast({
         title: "Error rejecting club",
         description: error.message || "Something went wrong",
