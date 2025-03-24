@@ -1,98 +1,97 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { getPendingClubs, approveClub, rejectClub } from '@/lib/mongodb/services/clubService';
 import { toast } from '@/components/ui/use-toast';
 
-interface Club {
+export interface Club {
   id: string;
   name: string;
-  description?: string;
   representative_id: string;
-  status: string;
-  [key: string]: any;
+  description?: string;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export const useClubApprovals = () => {
-  const [isLoading, setIsLoading] = useState(false);
   const [clubs, setClubs] = useState<Club[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const fetchPendingClubs = async () => {
+  const fetchPendingClubs = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await getPendingClubs();
       
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
       setClubs(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching pending clubs:', error);
       toast({
-        title: "Error fetching clubs",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch pending club requests.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleApproveClub = async (clubId: string) => {
-    setIsLoading(true);
+  const approveClubAction = useCallback(async (clubId: string) => {
     try {
       const { data, error } = await approveClub(clubId);
       
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
-      // Update local state
-      setClubs(clubs.filter(club => club.id !== clubId));
+      // Update local clubs state
+      setClubs(prevClubs => prevClubs.filter(club => club.id !== clubId));
       
       toast({
-        title: "Club approved",
-        description: "The club has been successfully approved.",
+        title: 'Club Approved',
+        description: 'The club has been approved successfully.',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error approving club:', error);
       toast({
-        title: "Error approving club",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to approve the club.',
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleRejectClub = async (clubId: string) => {
-    setIsLoading(true);
+  const rejectClubAction = useCallback(async (clubId: string) => {
     try {
       const { data, error } = await rejectClub(clubId);
       
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
-      // Update local state
-      setClubs(clubs.filter(club => club.id !== clubId));
+      // Update local clubs state
+      setClubs(prevClubs => prevClubs.filter(club => club.id !== clubId));
       
       toast({
-        title: "Club rejected",
-        description: "The club has been rejected.",
+        title: 'Club Rejected',
+        description: 'The club has been rejected.',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error rejecting club:', error);
       toast({
-        title: "Error rejecting club",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to reject the club.',
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, []);
 
   return {
     clubs,
     isLoading,
     fetchPendingClubs,
-    approveClub: handleApproveClub,
-    rejectClub: handleRejectClub
+    approveClub: approveClubAction,
+    rejectClub: rejectClubAction
   };
 };

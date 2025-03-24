@@ -165,5 +165,3 @@ export async function rejectClub(id: string) {
     return { data: null, error };
   }
 }
-
-// More club-related functions as needed

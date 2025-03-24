@@ -1,12 +1,13 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import { ChevronUp, Users, CalendarCheck, Briefcase, MessageSquare, ShieldAlert, Award, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import dbConnect from '@/lib/mongodb/db';
+import Club from '@/lib/mongodb/models/Club';
+import User from '@/lib/mongodb/models/User';
+import Post from '@/lib/mongodb/models/Post';
 
 // Stats cards for different metrics
 const StatCard = ({ title, value, description, icon, trend, loading = false }: { 
@@ -48,27 +49,15 @@ const AdminOverview = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      // Fetch counts from various tables
-      const clubsResult = await supabase.from('clubs').select('*', { count: 'exact', head: true });
-      const usersResult = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-      const eventsResult = await supabase.from('events').select('*', { count: 'exact', head: true });
-      const positionsResult = await supabase.from('recruitment_positions').select('*', { count: 'exact', head: true });
-      const pendingClubsResult = await supabase.from('clubs')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
-      const postsResult = await supabase.from('posts').select('*', { count: 'exact', head: true });
-
-      const clubsCount = clubsResult.count || 0;
-      const usersCount = usersResult.count || 0;
-      const eventsCount = eventsResult.count || 0;
-      const positionsCount = positionsResult.count || 0;
-      const pendingClubsCount = pendingClubsResult.count || 0;
-      const postsCount = postsResult.count || 0;
-
-      if (clubsResult.error || usersResult.error || eventsResult.error || 
-          positionsResult.error || pendingClubsResult.error || postsResult.error) {
-        throw new Error('Failed to fetch statistics');
-      }
+      await dbConnect();
+      
+      // Get counts from MongoDB collections
+      const clubsCount = await Club.countDocuments();
+      const usersCount = await User.countDocuments();
+      const eventsCount = 0; // Will need to create Event model
+      const positionsCount = 0; // Will need to create Recruitment model
+      const pendingClubsCount = await Club.countDocuments({ status: 'pending' });
+      const postsCount = await Post.countDocuments();
 
       return {
         clubsCount,

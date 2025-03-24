@@ -63,6 +63,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
           </div>
           <div className="grid gap-2">
             <PasswordInput
+              id="password"
               label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

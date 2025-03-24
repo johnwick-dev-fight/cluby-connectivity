@@ -108,5 +108,3 @@ export async function deletePost(id: string) {
     return { error };
   }
 }
-
-// More post-related functions as needed

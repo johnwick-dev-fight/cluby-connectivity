@@ -1,10 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Check, X, AlertTriangle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -19,8 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { getPosts, deletePost } from '@/lib/mongodb/services/postService';
 
-// Types for our posts data with UI state
 interface Post {
   id: string;
   title: string;
@@ -38,58 +36,24 @@ interface Post {
   profile?: {
     full_name: string;
     avatar_url: string | null;
-  } | null; // Make profile optional to handle the case when it's not found
+  } | null; 
 }
 
 const CommunityManagement = () => {
   const queryClient = useQueryClient();
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
   
-  // Fetch posts with club and profile information
-  const { data: posts, isLoading } = useQuery({
+  const { data: postsData, isLoading } = useQuery({
     queryKey: ['admin-posts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          club:club_id(name, logo_url)
-        `)
-        .order('created_at', { ascending: false });
-        
+      const { data, error } = await getPosts();
       if (error) throw error;
-      
-      // For each post, fetch the author's profile separately
-      // since there's an issue with the direct relation
-      const postsWithProfiles = await Promise.all(data.map(async (post) => {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url')
-          .eq('id', post.author_id)
-          .single();
-          
-        return {
-          ...post,
-          profile: profileError ? null : profileData
-        };
-      }));
-      
-      return postsWithProfiles as Post[];
+      return data || [];
     },
   });
 
-  // Mutation for approving/rejecting posts (this would be implemented if we had status column)
   const updatePostMutation = useMutation({
     mutationFn: async ({ id, ui_status }: { id: string; ui_status: 'approved' | 'rejected' }) => {
-      // In a real application with a status column in the posts table:
-      // const { error } = await supabase
-      //   .from('posts')
-      //   .update({ status: status })
-      //   .eq('id', id);
-      //
-      // if (error) throw error;
-      
-      // Since we don't have a status column, we'll simulate it for UI purposes
       return { id, ui_status };
     },
     onSuccess: (data) => {
@@ -115,14 +79,9 @@ const CommunityManagement = () => {
     },
   });
 
-  // Delete post mutation
   const deletePostMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', id);
-        
+      const { error } = await deletePost(id);
       if (error) throw error;
       return id;
     },
@@ -195,8 +154,8 @@ const CommunityManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {posts && posts.length > 0 ? (
-                    posts.map((post) => (
+                  {postsData && postsData.length > 0 ? (
+                    postsData.map((post) => (
                       <React.Fragment key={post.id}>
                         <TableRow>
                           <TableCell>
