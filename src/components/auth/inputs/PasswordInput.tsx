@@ -9,7 +9,8 @@ interface PasswordInputProps {
   id: string;
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
   showForgotPassword?: boolean;
   onForgotPasswordClick?: () => void;
 }
@@ -19,6 +20,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   label, 
   value, 
   onChange, 
+  placeholder = "••••••••",
   showForgotPassword = false,
   onForgotPasswordClick
 }) => {
@@ -41,9 +43,9 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
         <Input
           id={id}
           type={showPassword ? "text" : "password"}
-          placeholder="••••••••"
+          placeholder={placeholder}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           className="pl-9 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           autoComplete={id === "password" ? "current-password" : undefined}
         />

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import EmailInput from './inputs/EmailInput';
 import PasswordInput from './inputs/PasswordInput';
@@ -57,7 +57,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
       <CardContent className="grid gap-4">
         <form onSubmit={handleSubmit}>
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
             <EmailInput
               id="email"
               placeholder="Enter your email"
@@ -66,9 +65,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
             <PasswordInput
               id="password"
+              label="Password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

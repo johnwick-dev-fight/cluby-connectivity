@@ -28,7 +28,7 @@ interface PostType {
   author: {
     full_name: string | null;
     avatar_url: string | null;
-  };
+  } | null | { error: boolean };  // Updated to handle error cases
   _count?: {
     likes: number;
     comments: number;
@@ -134,7 +134,7 @@ const Community = () => {
           })
         );
 
-        return postsWithCounts;
+        return postsWithCounts as PostType[];
       }
 
       return [];
