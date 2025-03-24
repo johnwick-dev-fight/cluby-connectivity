@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { getPosts } from '@/lib/mongodb/services/postService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +27,7 @@ interface PostType {
   author: {
     full_name: string | null;
     avatar_url: string | null;
-  } | null | { error: boolean };  // Updated to handle error cases
+  } | null | { error: boolean };
   _count?: {
     likes: number;
     comments: number;
@@ -60,84 +59,49 @@ const Community = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Fetch posts with proper club and author details
   const { data: posts, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['posts', activeFilter, searchTerm],
     queryFn: async () => {
-      let query = supabase
-        .from('posts')
-        .select(`
-          *,
-          club:club_id(name, logo_url),
-          author:author_id(full_name, avatar_url)
-        `)
-        .order('created_at', { ascending: false });
-
-      // Apply filter
+      let query: any = {};
+      
       if (activeFilter !== 'all') {
         if (activeFilter === 'following') {
-          // Get clubs the user is following/member of
-          const { data: followedClubs } = await supabase
-            .from('club_members')
-            .select('club_id')
-            .eq('user_id', user?.id)
-            .eq('status', 'approved');
-
-          if (followedClubs && followedClubs.length > 0) {
-            const clubIds = followedClubs.map(fc => fc.club_id);
-            query = query.in('club_id', clubIds);
-          } else {
-            // No followed clubs, return empty array
+          if (!user) {
             return [];
           }
+          return [];
         } else if (activeFilter === 'events') {
-          query = query.eq('post_type', 'event');
+          query.post_type = 'event';
         } else if (activeFilter === 'announcements') {
-          query = query.eq('post_type', 'announcement');
+          query.post_type = 'announcement';
         }
       }
-
-      // Apply search term
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
+      
+      const { data, error } = await getPosts(query);
       
       if (error) {
         throw error;
       }
-
-      // Calculate counts for likes and comments
-      if (data) {
-        const postsWithCounts = await Promise.all(
-          data.map(async (post) => {
-            // Get like count
-            const { count: likeCount } = await supabase
-              .from('post_likes')
-              .select('*', { count: 'exact' })
-              .eq('post_id', post.id);
-
-            // Get comment count
-            const { count: commentCount } = await supabase
-              .from('comments')
-              .select('*', { count: 'exact' })
-              .eq('post_id', post.id);
-
-            return {
-              ...post,
-              _count: {
-                likes: likeCount || 0,
-                comments: commentCount || 0
-              }
-            };
-          })
+      
+      let filteredPosts = data || [];
+      
+      if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        filteredPosts = filteredPosts.filter((post: PostType) => 
+          post.title.toLowerCase().includes(lowerSearchTerm) || 
+          post.content.toLowerCase().includes(lowerSearchTerm)
         );
-
-        return postsWithCounts as PostType[];
       }
-
-      return [];
+      
+      const postsWithCounts = filteredPosts.map((post: PostType) => ({
+        ...post,
+        _count: {
+          likes: 0,
+          comments: 0
+        }
+      }));
+      
+      return postsWithCounts as PostType[];
     }
   });
 
@@ -151,7 +115,6 @@ const Community = () => {
 
   const handlePostSuccess = () => {
     setIsDialogOpen(false);
-    // Refetch posts to show the new one
     refetch();
     toast({
       title: "Post created",

@@ -1,7 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { signIn, signUp, signOut, verifyToken, getUserProfile } from '@/lib/mongodb/services/userService';
 import { toast } from '@/components/ui/use-toast';
 
 export type UserRole = 'student' | 'clubRepresentative' | 'admin';
@@ -25,7 +24,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
+  session: { access_token: string } | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -47,89 +46,54 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<{ access_token: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Function to fetch user profile and set user state
-  const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
-    try {
-      console.log("Fetching user profile for:", supabaseUser.email);
+  // Check for existing session on load
+  useEffect(() => {
+    const checkAuth = async () => {
+      setIsLoading(true);
+      const token = localStorage.getItem('auth_token');
       
-      // Define the default role
-      let role: UserRole = 'student';
-      
-      // Check for admin email first (most reliable method)
-      if (supabaseUser.email?.includes('admin')) {
-        console.log("Setting role as admin based on email");
-        role = 'admin';
-      } 
-      // Then check user metadata
-      else if (supabaseUser.user_metadata?.role === 'admin') {
-        console.log("Setting role as admin based on metadata");
-        role = 'admin';
-      } else if (supabaseUser.user_metadata?.role === 'clubRepresentative') {
-        console.log("Setting role as clubRepresentative based on metadata");
-        role = 'clubRepresentative';
-      } else if (supabaseUser.email?.includes('club_rep')) {
-        console.log("Setting role as clubRepresentative based on email");
-        role = 'clubRepresentative';
-      } else {
-        // Fallback check for club representatives
+      if (token) {
         try {
-          const { data: clubRep, error } = await supabase
-            .from('clubs')
-            .select('representative_id')
-            .eq('representative_id', supabaseUser.id)
-            .maybeSingle();
+          const { data, error } = await verifyToken(token);
+          
+          if (error || !data) {
+            localStorage.removeItem('auth_token');
+            setUser(null);
+            setSession(null);
+          } else {
+            // Token is valid, set up user data
+            const userData = data as any;
+            const profile = await getUserProfile(userData.id);
             
-          if (clubRep && !error) {
-            console.log("Setting role as clubRepresentative based on clubs table");
-            role = 'clubRepresentative';
-          } else if (error && error.code !== 'PGRST116') {
-            console.log("Error checking club representative:", error.message);
+            setUser({
+              id: userData.id,
+              email: userData.email,
+              role: userData.role,
+              profile: profile || undefined
+            });
+            
+            setSession({ access_token: token });
           }
         } catch (error) {
-          console.error("Error checking club representative:", error);
+          console.error('Error verifying token:', error);
+          localStorage.removeItem('auth_token');
         }
       }
       
-      // Get user profile
-      let profile: Profile | undefined;
-      try {
-        console.log("Fetching profile for user ID:", supabaseUser.id);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', supabaseUser.id)
-          .maybeSingle();
-        
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-        } else if (data) {
-          console.log("Found profile:", data);
-          profile = data;
-        } else {
-          console.log("No profile found, will create one");
-          // Creating a profile is now handled by the database trigger
-          // If no profile exists, just return the user without a profile
-        }
-      } catch (error) {
-        console.error('Error in profile fetch process:', error);
-      }
-      
-      console.log("Final user data:", {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        role,
-        profile
-      });
-      
-      return {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        role,
-        profile
-      };
+      setIsLoading(false);
+    };
+    
+    checkAuth();
+  }, []);
+
+  // Function to fetch user profile
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const profile = await getUserProfile(userId);
+      return profile;
     } catch (error) {
       console.error('Error fetching user profile:', error);
       return null;
@@ -138,88 +102,55 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
   // Refresh user data
   const refreshUser = async () => {
+    if (!session?.access_token) return;
+    
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const userData = await fetchUserProfile(session.user);
-        setUser(userData);
-        setSession(session);
+      const { data } = await verifyToken(session.access_token);
+      if (data) {
+        const userData = data as any;
+        const profile = await getUserProfile(userData.id);
+        
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          role: userData.role,
+          profile: profile || undefined
+        });
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
     }
   };
 
-  // Initial session check
-  useEffect(() => {
-    setIsLoading(true);
-    console.log("Setting up authentication system...");
-    
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
-      setSession(session);
-      
-      if (session?.user) {
-        const userData = await fetchUserProfile(session.user);
-        setUser(userData);
-      } else {
-        setUser(null);
-      }
-      
-      setIsLoading(false);
-    });
-    
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
-      setSession(session);
-      
-      if (session?.user) {
-        try {
-          const userData = await fetchUserProfile(session.user);
-          setUser(userData);
-        } catch (err) {
-          console.error("Error setting user data:", err);
-          // Don't set user if there was an error
-        }
-      }
-      
-      setIsLoading(false);
-    }).catch(error => {
-      console.error("Error getting session:", error);
-      setIsLoading(false);
-    });
-
-    // Cleanup subscription
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   // Login function
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log("Login attempt for:", email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { user: authUser, session: authSession, error } = await signIn(email, password);
       
       if (error) {
-        console.error("Login error:", error);
         throw error;
       }
       
-      if (data.user) {
-        console.log("Login successful for:", data.user.email);
-        const userData = await fetchUserProfile(data.user);
-        setUser(userData);
-        setSession(data.session);
+      if (authUser && authSession) {
+        // Store the token
+        localStorage.setItem('auth_token', authSession.access_token);
+        
+        // Fetch user profile
+        const profile = await fetchUserProfile(authUser.id);
+        
+        setUser({
+          id: authUser.id,
+          email: authUser.email,
+          role: authUser.role,
+          profile: profile || undefined
+        });
+        
+        setSession(authSession);
+        
         toast({
           title: "Login successful",
-          description: `Welcome back${userData?.profile?.full_name ? ', ' + userData.profile.full_name : ''}!`,
+          description: `Welcome back${profile?.full_name ? ', ' + profile.full_name : ''}!`,
         });
       }
     } catch (error: any) {
@@ -238,9 +169,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // Logout function
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
+      localStorage.removeItem('auth_token');
       setUser(null);
       setSession(null);
+      
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -259,31 +192,35 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const register = async (name: string, email: string, password: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      console.log("Registration attempt for:", email, "with role:", role);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            role: role,
-          },
-        },
+      const { user: authUser, session: authSession, error } = await signUp(email, password, {
+        full_name: name,
+        role: role,
       });
       
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Registration successful",
         description: "Welcome to Cluby! Your account has been created.",
       });
       
-      if (data.user) {
-        console.log("Registration successful for:", data.user.email);
-        // The profile will be created by the database trigger
-        const userData = await fetchUserProfile(data.user);
-        setUser(userData);
-        setSession(data.session);
+      if (authUser && authSession) {
+        // Store the token
+        localStorage.setItem('auth_token', authSession.access_token);
+        
+        // Fetch user profile
+        const profile = await fetchUserProfile(authUser.id);
+        
+        setUser({
+          id: authUser.id,
+          email: authUser.email,
+          role: authUser.role,
+          profile: profile || undefined
+        });
+        
+        setSession(authSession);
       }
     } catch (error: any) {
       console.error("Registration error:", error);

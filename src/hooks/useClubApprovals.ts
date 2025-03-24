@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { getPendingClubs, approveClub, rejectClub } from '@/lib/mongodb/services/clubService';
 import { toast } from '@/components/ui/use-toast';
 
 interface Club {
@@ -19,13 +19,18 @@ export const useClubApprovals = () => {
   const fetchPendingClubs = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('clubs')
-        .select('*')
-        .eq('status', 'pending');
+      const { data, error } = await getPendingClubs();
       
       if (error) throw error;
-      setClubs(data || []);
+      
+      // Transform MongoDB _id to id for compatibility
+      const formattedClubs = data.map((club: any) => ({
+        ...club,
+        id: club._id.toString(),
+        _id: undefined
+      }));
+      
+      setClubs(formattedClubs || []);
     } catch (error: any) {
       toast({
         title: "Error fetching clubs",
@@ -37,13 +42,10 @@ export const useClubApprovals = () => {
     }
   };
 
-  const approveClub = async (clubId: string) => {
+  const handleApproveClub = async (clubId: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('clubs')
-        .update({ status: 'approved' })
-        .eq('id', clubId);
+      const { data, error } = await approveClub(clubId);
       
       if (error) throw error;
       
@@ -67,13 +69,10 @@ export const useClubApprovals = () => {
     }
   };
 
-  const rejectClub = async (clubId: string) => {
+  const handleRejectClub = async (clubId: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('clubs')
-        .update({ status: 'rejected' })
-        .eq('id', clubId);
+      const { data, error } = await rejectClub(clubId);
       
       if (error) throw error;
       
@@ -101,7 +100,7 @@ export const useClubApprovals = () => {
     clubs,
     isLoading,
     fetchPendingClubs,
-    approveClub,
-    rejectClub
+    approveClub: handleApproveClub,
+    rejectClub: handleRejectClub
   };
 };
