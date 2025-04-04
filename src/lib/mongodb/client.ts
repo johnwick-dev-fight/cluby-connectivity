@@ -1,32 +1,31 @@
 
 import { MongoClient } from 'mongodb';
 
-// Your MongoDB connection string - replace with your actual connection string
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority";
+// Your MongoDB connection string 
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/cluby";
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable');
 }
 
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+// Global variable to maintain connection across hot reloads
+let cached: { client: MongoClient | null; clientPromise: Promise<MongoClient> | null } = global.mongoClientPromise || { client: null, clientPromise: null };
 
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  let globalWithMongo = global as typeof global & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(MONGODB_URI);
-    globalWithMongo._mongoClientPromise = client.connect();
+if (!cached.clientPromise) {
+  // In development mode, we use global variables to preserve connections
+  if (process.env.NODE_ENV === 'development') {
+    if (!global.mongoClientPromise) {
+      const client = new MongoClient(MONGODB_URI);
+      cached.clientPromise = client.connect();
+      global.mongoClientPromise = cached;
+    } else {
+      cached = global.mongoClientPromise;
+    }
+  } else {
+    // In production, don't use globals
+    const client = new MongoClient(MONGODB_URI);
+    cached.clientPromise = client.connect();
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(MONGODB_URI);
-  clientPromise = client.connect();
 }
 
-export default clientPromise;
+export default cached.clientPromise;
