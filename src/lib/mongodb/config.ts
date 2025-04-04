@@ -1,4 +1,6 @@
 
+import { DB_CONFIG } from '../env';
+
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
@@ -6,10 +8,10 @@ const isBrowser = typeof window !== 'undefined';
 export const MONGODB_CONFIG = {
   // Replace the placeholders with actual values for local development and testing
   // These values are replaced by environment variables in production
-  username: isBrowser ? null : process.env.DB_USERNAME || '<db_username>',
-  password: isBrowser ? null : process.env.DB_PASSWORD || '<db_password>',
-  cluster: isBrowser ? null : process.env.DB_CLUSTER || 'cluster0.rvg9arm.mongodb.net',
-  options: isBrowser ? null : process.env.DB_OPTIONS || '?retryWrites=true&w=majority&appName=Cluster0',
+  username: isBrowser ? null : (process.env.DB_USERNAME || DB_CONFIG.username),
+  password: isBrowser ? null : (process.env.DB_PASSWORD || DB_CONFIG.password),
+  cluster: isBrowser ? null : (process.env.DB_CLUSTER || DB_CONFIG.cluster),
+  options: isBrowser ? null : (process.env.DB_OPTIONS || '?retryWrites=true&w=majority&appName=Cluster0'),
   
   // Construct the connection URI
   get uri() {

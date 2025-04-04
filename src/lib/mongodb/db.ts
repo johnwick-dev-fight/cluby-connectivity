@@ -1,15 +1,19 @@
 
 import mongoose from 'mongoose';
+import { DB_CONFIG } from '../env';
 
 // Prevent MongoDB connection in browser environment
 if (typeof window !== 'undefined') {
   console.warn('MongoDB connections should only be established in API routes, not in the browser');
 }
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://<db_username>:<db_password>@cluster0.rvg9arm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+// Get the MongoDB URI from environment variables or config
+const MONGODB_URI = typeof window === 'undefined' ? 
+  (process.env.MONGODB_URI || DB_CONFIG.uri) : 
+  ''; // Empty string in browser
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
+if (typeof window === 'undefined' && !MONGODB_URI) {
+  console.error('Missing MongoDB connection string');
 }
 
 interface CachedConnection {

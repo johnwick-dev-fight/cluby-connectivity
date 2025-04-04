@@ -8,9 +8,7 @@ const isBrowser = typeof window !== 'undefined';
 // Utility to safely access environment variables
 export function getEnv(key: string, defaultValue: string = ''): string {
   if (isBrowser) {
-    // In browser, check if we stored the value in localStorage for development
-    const storedValue = localStorage.getItem(`ENV_${key}`);
-    if (storedValue) return storedValue;
+    // In browser, return the default value (no process.env in browser)
     return defaultValue;
   }
   
@@ -20,10 +18,9 @@ export function getEnv(key: string, defaultValue: string = ''): string {
 
 // Database configuration
 export const DB_CONFIG = {
-  // In a real app, you'd never expose credentials in client-side code
-  // These placeholder values are meant for development only
-  username: getEnv('DB_USERNAME', '<db_username>'),
-  password: getEnv('DB_PASSWORD', '<db_password>'),
+  // For development and testing only
+  username: getEnv('DB_USERNAME', 'sampleuser'),
+  password: getEnv('DB_PASSWORD', 'samplepassword'),
   cluster: getEnv('DB_CLUSTER', 'cluster0.rvg9arm.mongodb.net'),
   dbName: getEnv('DB_NAME', 'cluby'),
   

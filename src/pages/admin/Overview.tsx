@@ -1,13 +1,10 @@
-import React, { useEffect, useState } from 'react';
+
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronUp, Users, CalendarCheck, Briefcase, MessageSquare, ShieldAlert, Award, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import dbConnect from '@/lib/mongodb/db';
-import Club from '@/lib/mongodb/models/Club';
-import User from '@/lib/mongodb/models/User';
-import Post from '@/lib/mongodb/models/Post';
 
 // Stats cards for different metrics
 const StatCard = ({ title, value, description, icon, trend, loading = false }: { 
@@ -45,28 +42,23 @@ const StatCard = ({ title, value, description, icon, trend, loading = false }: {
 );
 
 const AdminOverview = () => {
+  // Mock data for client-side rendering
+  const mockStats = {
+    clubsCount: 15,
+    usersCount: 120,
+    eventsCount: 8,
+    positionsCount: 12,
+    pendingClubsCount: 3,
+    postsCount: 24
+  };
+
   // Query to fetch platform statistics
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      await dbConnect();
-      
-      // Get counts from MongoDB collections
-      const clubsCount = await Club.countDocuments();
-      const usersCount = await User.countDocuments();
-      const eventsCount = 0; // Will need to create Event model
-      const positionsCount = 0; // Will need to create Recruitment model
-      const pendingClubsCount = await Club.countDocuments({ status: 'pending' });
-      const postsCount = await Post.countDocuments();
-
-      return {
-        clubsCount,
-        usersCount,
-        eventsCount,
-        positionsCount,
-        pendingClubsCount,
-        postsCount,
-      };
+      // In a real app, we would fetch from an API endpoint
+      // For now, just return mock data
+      return mockStats;
     },
   });
 
