@@ -6,7 +6,7 @@ if (typeof window !== 'undefined') {
   console.warn('MongoDB connections should only be established in API routes, not in the browser');
 }
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cluby';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://<db_username>:<db_password>@cluster0.rvg9arm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable');
@@ -50,7 +50,7 @@ async function dbConnect() {
 
     cached.promise = mongoose.connect(MONGODB_URI, opts)
       .then((mongoose) => {
-        console.log('MongoDB connected successfully');
+        console.log('MongoDB connected successfully via Mongoose');
         return mongoose;
       })
       .catch((error) => {
