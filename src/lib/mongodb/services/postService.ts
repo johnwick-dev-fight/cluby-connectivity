@@ -1,15 +1,17 @@
 
-// This file should be used in API routes only.
-// Since we're doing client-side authentication for now,
-// we'll leave this as a placeholder.
+// This file provides mock data for client-side development
+// In a real application, these functions would be API routes that connect to MongoDB
 
 export async function createPost(postData: any) {
-  console.warn('Server-side function called from client');
-  return { data: null, error: null };
+  console.log('Mocking post creation with data:', postData);
+  return { 
+    data: { id: 'mock-id', ...postData, created_at: new Date().toISOString() }, 
+    error: null 
+  };
 }
 
 export async function getPosts(query?: any) {
-  console.warn('Server-side function called from client');
+  console.log('Fetching mock posts with query:', query);
   
   // Return mock data for demonstration purposes
   return { 
@@ -34,12 +36,10 @@ export async function getPosts(query?: any) {
           full_name: 'John Doe',
           avatar_url: '/avatar-placeholder.jpg'
         },
-        // Add profile property to match the expected structure in CommunityManagement
         profile: {
           full_name: 'John Doe',
           avatar_url: '/avatar-placeholder.jpg'
         },
-        // Add ui_status property for the CommunityManagement component
         ui_status: undefined
       },
       {
@@ -62,12 +62,10 @@ export async function getPosts(query?: any) {
           full_name: 'Jane Smith',
           avatar_url: '/avatar-placeholder.jpg'
         },
-        // Add profile property to match the expected structure in CommunityManagement
         profile: {
           full_name: 'Jane Smith',
           avatar_url: '/avatar-placeholder.jpg'
         },
-        // Add ui_status property for the CommunityManagement component
         ui_status: undefined
       }
     ], 
@@ -76,31 +74,36 @@ export async function getPosts(query?: any) {
 }
 
 export async function getAllPosts() {
-  console.warn('Server-side function called from client');
   return getPosts();
 }
 
 export async function getPostById(postId: string) {
-  console.warn('Server-side function called from client');
-  return { data: null, error: null };
+  console.log('Fetching mock post with ID:', postId);
+  const { data } = await getPosts();
+  const post = data.find((p: any) => p.id === postId);
+  return { data: post || null, error: post ? null : 'Post not found' };
 }
 
 export async function updatePost(postId: string, postData: any) {
-  console.warn('Server-side function called from client');
-  return { data: null, error: null };
+  console.log('Mocking post update with ID:', postId, 'and data:', postData);
+  return { data: { id: postId, ...postData, updated_at: new Date().toISOString() }, error: null };
 }
 
 export async function deletePost(postId: string) {
-  console.warn('Server-side function called from client');
-  return { data: null, error: null };
+  console.log('Mocking post deletion with ID:', postId);
+  return { data: { id: postId, deleted: true }, error: null };
 }
 
 export async function getPostsByClubId(clubId: string) {
-  console.warn('Server-side function called from client');
-  return { data: [], error: null };
+  console.log('Fetching mock posts for club ID:', clubId);
+  const { data } = await getPosts();
+  const filteredPosts = data.filter((post: any) => post.club_id === clubId);
+  return { data: filteredPosts, error: null };
 }
 
 export async function getPostsByAuthorId(authorId: string) {
-  console.warn('Server-side function called from client');
-  return { data: [], error: null };
+  console.log('Fetching mock posts for author ID:', authorId);
+  const { data } = await getPosts();
+  const filteredPosts = data.filter((post: any) => post.author_id === authorId);
+  return { data: filteredPosts, error: null };
 }

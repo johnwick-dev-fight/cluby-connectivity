@@ -8,13 +8,16 @@ let clientPromise = null;
 // Only create a MongoDB client when running on the server
 if (typeof window === 'undefined') {
   const { MongoClient } = require('mongodb');
+  
+  // Replace this with your actual MongoDB connection string when deploying
   const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cluby';
 
   if (!MONGODB_URI) {
     throw new Error('Please define the MONGODB_URI environment variable');
   }
   
-  clientPromise = new MongoClient(MONGODB_URI).connect();
+  const client = new MongoClient(MONGODB_URI);
+  clientPromise = client.connect();
 } else {
   console.warn('MongoDB client cannot be created in the browser. Use API routes instead.');
 }

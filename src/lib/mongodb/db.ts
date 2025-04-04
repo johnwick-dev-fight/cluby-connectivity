@@ -1,7 +1,12 @@
 
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || '';
+// Prevent MongoDB connection in browser environment
+if (typeof window !== 'undefined') {
+  console.warn('MongoDB connections should only be established in API routes, not in the browser');
+}
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cluby';
 
 if (!MONGODB_URI) {
   console.warn('Please define the MONGODB_URI environment variable');
@@ -19,6 +24,11 @@ if (!cached) {
 }
 
 async function dbConnect() {
+  if (typeof window !== 'undefined') {
+    console.warn('Attempted to connect to MongoDB from the browser');
+    return null;
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
