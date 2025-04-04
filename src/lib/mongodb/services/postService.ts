@@ -33,7 +33,14 @@ export async function getPosts(query?: any) {
           _id: '1',
           full_name: 'John Doe',
           avatar_url: '/avatar-placeholder.jpg'
-        }
+        },
+        // Add profile property to match the expected structure in CommunityManagement
+        profile: {
+          full_name: 'John Doe',
+          avatar_url: '/avatar-placeholder.jpg'
+        },
+        // Add ui_status property for the CommunityManagement component
+        ui_status: undefined
       },
       {
         id: '2',
@@ -54,7 +61,14 @@ export async function getPosts(query?: any) {
           _id: '2',
           full_name: 'Jane Smith',
           avatar_url: '/avatar-placeholder.jpg'
-        }
+        },
+        // Add profile property to match the expected structure in CommunityManagement
+        profile: {
+          full_name: 'Jane Smith',
+          avatar_url: '/avatar-placeholder.jpg'
+        },
+        // Add ui_status property for the CommunityManagement component
+        ui_status: undefined
       }
     ], 
     error: null 
