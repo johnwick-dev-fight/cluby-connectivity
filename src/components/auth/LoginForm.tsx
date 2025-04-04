@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
-  Card,
   CardContent,
   CardDescription,
   CardFooter,
@@ -16,6 +15,7 @@ import PasswordInput from './inputs/PasswordInput';
 import { toast } from '@/components/ui/use-toast';
 import TestAccountsSection from './sections/TestAccountsSection';
 import LoginErrorAlert from './sections/LoginErrorAlert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 
 interface LoginFormProps {
@@ -26,6 +26,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,46 +47,60 @@ const LoginForm: React.FC<LoginFormProps> = ({ onRegisterClick }) => {
   };
 
   return (
-    <Card>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl">Login</CardTitle>
+    <>
+      <CardHeader className="space-y-1 px-6 py-5">
+        <CardTitle className="text-xl font-medium">Welcome back</CardTitle>
         <CardDescription>
-          Enter your email and password to access your account.
+          Enter your credentials to access your account
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4">
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-2">
-            <EmailInput
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+      <CardContent className="px-6 pt-2 pb-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <EmailInput
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          
+          <PasswordInput
+            id="password"
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            showForgotPassword
+          />
+          
+          <div className="flex items-center space-x-2 mt-2">
+            <Checkbox 
+              id="remember" 
+              checked={rememberMe} 
+              onCheckedChange={(checked) => setRememberMe(checked as boolean)} 
             />
+            <label
+              htmlFor="remember"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-600 dark:text-gray-300"
+            >
+              Remember me
+            </label>
           </div>
-          <div className="grid gap-2">
-            <PasswordInput
-              id="password"
-              label="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          
           <LoginErrorAlert error={loginError} />
-          <CardFooter>
-            <Button disabled={isLoading} className="w-full">
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Login
-            </Button>
-          </CardFooter>
+          
+          <Button type="submit" disabled={isLoading} className="w-full">
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Sign in
+          </Button>
+          
+          <div className="text-sm text-center text-muted-foreground mt-2">
+            Don't have an account?{' '}
+            <Link to="#" onClick={onRegisterClick} className="text-primary hover:underline">
+              Create an account
+            </Link>
+          </div>
         </form>
       </CardContent>
-      <div className="px-6 pb-4 text-sm text-muted-foreground">
-        Don't have an account?{' '}
-        <Link to="#" onClick={onRegisterClick} className="text-primary hover:underline">
-          Register
-        </Link>
-      </div>
+      
       <TestAccountsSection />
-    </Card>
+    </>
   );
 };
 

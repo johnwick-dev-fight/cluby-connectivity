@@ -33,7 +33,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
       <div className="flex justify-between">
         <Label htmlFor={id} className="dark:text-gray-300">{label}</Label>
         {showForgotPassword && (
-          <Button variant="link" size="sm" className="px-0 text-cluby-600 dark:text-cluby-400" onClick={onForgotPasswordClick}>
+          <Button variant="link" size="sm" className="px-0 h-5 text-cluby-600 dark:text-cluby-400" onClick={onForgotPasswordClick}>
             Forgot password?
           </Button>
         )}
@@ -47,7 +47,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           value={value}
           onChange={onChange}
           className="pl-9 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          autoComplete={id === "password" ? "current-password" : undefined}
+          autoComplete={id === "password" ? "current-password" : "new-password"}
         />
         <Button
           type="button"
@@ -55,6 +55,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           size="icon"
           className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           onClick={toggleShowPassword}
+          tabIndex={-1}
         >
           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </Button>

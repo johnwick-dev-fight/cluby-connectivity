@@ -30,7 +30,7 @@ const EmailInput: React.FC<EmailInputProps> = ({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className="pl-9 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          className="pl-9 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-cluby-500 focus:border-cluby-500"
           autoComplete="email"
         />
       </div>
