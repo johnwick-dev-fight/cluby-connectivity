@@ -15,29 +15,13 @@ if (!isBrowser && !MONGODB_URI) {
 }
 
 // Global variable to maintain connection across hot reloads
-let cached: { client: MongoClient | null; clientPromise: Promise<MongoClient> | null } = 
-  (global as any).mongoClientPromise || { client: null, clientPromise: null };
+let cached: { client: MongoClient | null; clientPromise: Promise<MongoClient> | null } = { client: null, clientPromise: null };
 
-if (!isBrowser && !cached.clientPromise) {
-  // In development mode, we use global variables to preserve connections
-  if (process.env.NODE_ENV === 'development') {
-    if (!(global as any).mongoClientPromise) {
-      const client = new MongoClient(MONGODB_URI);
-      cached.clientPromise = client.connect()
-        .then(client => {
-          console.log('MongoDB connected via MongoClient');
-          return client;
-        })
-        .catch(err => {
-          console.error('MongoDB connection error:', err);
-          throw err;
-        });
-      (global as any).mongoClientPromise = cached;
-    } else {
-      cached = (global as any).mongoClientPromise;
-    }
-  } else {
-    // In production, don't use globals
+// Use globalThis instead of global for browser compatibility
+if (!isBrowser) {
+  const globalAny = globalThis as any;
+  
+  if (!globalAny.mongoClientPromise) {
     const client = new MongoClient(MONGODB_URI);
     cached.clientPromise = client.connect()
       .then(client => {
@@ -48,6 +32,9 @@ if (!isBrowser && !cached.clientPromise) {
         console.error('MongoDB connection error:', err);
         throw err;
       });
+    globalAny.mongoClientPromise = cached;
+  } else {
+    cached = globalAny.mongoClientPromise;
   }
 }
 

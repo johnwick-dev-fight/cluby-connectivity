@@ -17,18 +17,11 @@ if (typeof window === 'undefined') {
   
   // Global is used here to maintain a cached connection across hot reloads
   // in development. This prevents connections growing exponentially.
-  let globalWithMongo = global as typeof global & {
-    _mongoClientPromise?: Promise<any>;
-  };
+  const globalAny = globalThis as any;
   
-  if (!globalWithMongo._mongoClientPromise) {
-    const client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-    });
-    
-    globalWithMongo._mongoClientPromise = client.connect()
+  if (!globalAny.mongoClientPromise) {
+    const client = new MongoClient(MONGODB_URI);
+    clientPromise = client.connect()
       .then((client: any) => {
         console.log('MongoDB connected via MongoClient');
         return client;
@@ -37,9 +30,10 @@ if (typeof window === 'undefined') {
         console.error('MongoDB connection error:', err);
         throw err;
       });
+    globalAny.mongoClientPromise = clientPromise;
+  } else {
+    clientPromise = globalAny.mongoClientPromise;
   }
-  
-  clientPromise = globalWithMongo._mongoClientPromise;
 } else {
   console.warn('MongoDB client cannot be created in the browser. Use API routes instead.');
 }

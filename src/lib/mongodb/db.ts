@@ -16,20 +16,24 @@ if (typeof window === 'undefined' && !MONGODB_URI) {
   console.error('Missing MongoDB connection string');
 }
 
+// Define a type-safe cached connection object
 interface CachedConnection {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
 }
 
-// Global cache to maintain a single connection
-const globalWithMongoose = global as typeof global & {
-  mongoose: CachedConnection;
-};
+// Create a cached connection variable in a browser-safe way
+let cached: CachedConnection = { conn: null, promise: null };
 
-let cached: CachedConnection = globalWithMongoose.mongoose || { conn: null, promise: null };
-
-if (!globalWithMongoose.mongoose) {
-  globalWithMongoose.mongoose = cached;
+// In Node.js environment, we might want to attach to global object
+if (typeof window === 'undefined') {
+  // Using globalThis which works in both browser and Node environments
+  const globalAny = globalThis as any;
+  if (!globalAny.mongooseCache) {
+    globalAny.mongooseCache = cached;
+  } else {
+    cached = globalAny.mongooseCache;
+  }
 }
 
 async function dbConnect() {
