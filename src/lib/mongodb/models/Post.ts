@@ -1,6 +1,7 @@
 
 import mongoose, { Document, Schema } from 'mongoose';
 
+// Define Post document interface
 export interface PostDocument extends Document {
   title: string;
   content: string;
@@ -13,6 +14,7 @@ export interface PostDocument extends Document {
   updated_at: Date;
 }
 
+// Create the schema definition
 const PostSchema = new Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
@@ -29,5 +31,20 @@ const PostSchema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Check if model already exists (for development with hot reloading)
-export default mongoose.models.Post || mongoose.model<PostDocument>('Post', PostSchema);
+// Only attempt to create/export the model when running on the server
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// Handle model creation safely
+let Post: mongoose.Model<PostDocument>;
+
+if (!isBrowser) {
+  // Check if model already exists to avoid model overwrite errors during hot reloading
+  Post = mongoose.models.Post || mongoose.model<PostDocument>('Post', PostSchema);
+} else {
+  // Return a dummy model or null in browser context
+  // This prevents errors when importing in browser contexts
+  Post = {} as mongoose.Model<PostDocument>;
+}
+
+export default Post;

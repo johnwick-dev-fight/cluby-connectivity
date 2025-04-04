@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { createPost } from '@/lib/mongodb/services/postService';
 
 interface CreatePostDialogProps {
   open: boolean;
@@ -26,24 +26,25 @@ const CreatePostDialog: React.FC<CreatePostDialogProps> = ({ open, onOpenChange,
   const [clubId, setClubId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch user's clubs (where they're a representative)
+  // Mock data for clubs when in browser environment
+  const MOCK_CLUBS = [
+    { id: '1', name: 'Programming Club' },
+    { id: '2', name: 'Photography Club' }
+  ];
+
+  // Fetch user's clubs (or use mock data in browser)
   const { data: userClubs, isLoading: isLoadingClubs } = useQuery({
     queryKey: ['userClubs'],
     queryFn: async () => {
       if (!user) return [];
       
-      // Check if user is a club representative
-      const { data, error } = await supabase
-        .from('clubs')
-        .select('id, name')
-        .eq('representative_id', user.id)
-        .eq('status', 'approved');
-        
-      if (error) {
-        throw error;
+      // In browser environment, return mock data
+      if (typeof window !== 'undefined') {
+        return MOCK_CLUBS;
       }
       
-      return data || [];
+      // Server logic would go here
+      return [];
     },
     enabled: !!user
   });
@@ -63,17 +64,15 @@ const CreatePostDialog: React.FC<CreatePostDialogProps> = ({ open, onOpenChange,
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase
-        .from('posts')
-        .insert({
-          title,
-          content,
-          club_id: clubId,
-          author_id: user?.id,
-          post_type: postType,
-        });
-        
-      if (error) throw error;
+      const { data, error } = await createPost({
+        title,
+        content,
+        club_id: clubId,
+        author_id: user?.id || 'mock-user-id',
+        post_type: postType,
+      });
+      
+      if (error) throw new Error(error);
       
       // Reset form
       setTitle('');
