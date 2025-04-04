@@ -8,20 +8,22 @@ export async function createPost(postData: any) {
   return { data: null, error: null };
 }
 
-export async function getAllPosts() {
+export async function getPosts(query?: any) {
   console.warn('Server-side function called from client');
   
   // Return mock data for demonstration purposes
   return { 
     data: [
       {
-        _id: '1',
+        id: '1',
         title: 'Welcome to Cluby',
         content: 'Join us for the kickoff meeting of the new semester!',
         club_id: '1',
         author_id: '1',
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        image_url: null,
+        post_type: 'general',
         club: {
           _id: '1',
           name: 'Programming Club',
@@ -34,13 +36,15 @@ export async function getAllPosts() {
         }
       },
       {
-        _id: '2',
+        id: '2',
         title: 'Photography Contest',
         content: 'Submit your best shots for a chance to win prizes!',
         club_id: '2',
         author_id: '2',
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        image_url: null,
+        post_type: 'event',
         club: {
           _id: '2',
           name: 'Photography Club',
@@ -55,6 +59,11 @@ export async function getAllPosts() {
     ], 
     error: null 
   };
+}
+
+export async function getAllPosts() {
+  console.warn('Server-side function called from client');
+  return getPosts();
 }
 
 export async function getPostById(postId: string) {
