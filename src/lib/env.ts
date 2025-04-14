@@ -15,10 +15,10 @@ export function getEnv(key: string, defaultValue: string = ''): string {
 
 // Database configuration
 export const DB_CONFIG = {
-  username: getEnv('DB_USERNAME', ''),
-  password: getEnv('DB_PASSWORD', ''),
+  username: getEnv('clubyadmin', ''),
+  password: getEnv('CpVrvxqz2sSf@N6', ''),
   cluster: getEnv('DB_CLUSTER', ''),
-  dbName: getEnv('DB_NAME', 'cluby'),
+  dbName: getEnv('Cluster0', 'cluby'),
   
   // Get the full connection URI
   get uri(): string {
@@ -27,7 +27,7 @@ export const DB_CONFIG = {
       return '';
     }
     
-    const uri = getEnv('MONGODB_URI');
+    const uri = getEnv('mongodb+srv://clubyadmin:CpVrvxqz2sSf@N6@cluster0.rvg9arm.mongodb.net/?appName=Cluster0');
     if (uri) return uri;
     
     return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/${this.dbName}?retryWrites=true&w=majority`;
