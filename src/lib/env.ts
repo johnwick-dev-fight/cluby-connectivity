@@ -17,7 +17,7 @@ export function getEnv(key: string, defaultValue: string = ''): string {
 export const DB_CONFIG = {
   username: getEnv('clubyadmin', ''),
   password: getEnv('CpVrvxqz2sSf@N6', ''),
-  cluster: getEnv('DB_CLUSTER', ''),
+  cluster: getEnv('cluster0.rvg9arm.mongodb.net', ''),
   dbName: getEnv('Cluster0', 'cluby'),
   
   // Get the full connection URI
