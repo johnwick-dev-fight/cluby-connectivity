@@ -8,15 +8,12 @@ if (typeof window !== 'undefined') {
 }
 
 // Get the MongoDB URI from environment variables or config
-const MONGODB_URI = typeof window === 'undefined' ? 
-  (process.env.MONGODB_URI || DB_CONFIG.uri) : 
-  ''; // Empty string in browser
+const MONGODB_URI = typeof window === 'undefined' ? DB_CONFIG.uri : '';
 
-if (typeof window === 'undefined' && !MONGODB_URI) {
+if (!MONGODB_URI && typeof window === 'undefined') {
   console.error('Missing MongoDB connection string');
 }
 
-// Define a type-safe cached connection object
 interface CachedConnection {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -25,9 +22,7 @@ interface CachedConnection {
 // Create a cached connection variable in a browser-safe way
 let cached: CachedConnection = { conn: null, promise: null };
 
-// In Node.js environment, we might want to attach to global object
 if (typeof window === 'undefined') {
-  // Using globalThis which works in both browser and Node environments
   const globalAny = globalThis as any;
   if (!globalAny.mongooseCache) {
     globalAny.mongooseCache = cached;
@@ -43,22 +38,20 @@ async function dbConnect() {
     return null;
   }
 
-  // Return existing connection if available
   if (cached.conn) {
     return cached.conn;
   }
 
-  // Create new connection if none exists
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts)
       .then((mongoose) => {
-        console.log('MongoDB connected successfully via Mongoose');
+        console.log('MongoDB connected successfully');
         return mongoose;
       })
       .catch((error) => {
@@ -71,7 +64,6 @@ async function dbConnect() {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    console.error('Failed to connect to MongoDB:', e);
     throw e;
   }
   

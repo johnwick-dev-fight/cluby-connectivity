@@ -1,4 +1,3 @@
-
 // Environment configuration
 // This centralizes environment variable management and provides fallbacks
 
@@ -8,20 +7,16 @@ const isBrowser = typeof window !== 'undefined';
 // Utility to safely access environment variables
 export function getEnv(key: string, defaultValue: string = ''): string {
   if (isBrowser) {
-    // In browser, return the default value (no process.env in browser)
     return defaultValue;
   }
-  
-  // In Node.js, access process.env
   return (process.env && process.env[key]) || defaultValue;
 }
 
 // Database configuration
 export const DB_CONFIG = {
-  // For development and testing only
-  username: getEnv('DB_USERNAME', 'sampleuser'),
-  password: getEnv('DB_PASSWORD', 'samplepassword'),
-  cluster: getEnv('DB_CLUSTER', 'cluster0.rvg9arm.mongodb.net'),
+  username: getEnv('DB_USERNAME'),
+  password: getEnv('DB_PASSWORD'),
+  cluster: getEnv('DB_CLUSTER'),
   dbName: getEnv('DB_NAME', 'cluby'),
   
   // Get the full connection URI
@@ -31,10 +26,10 @@ export const DB_CONFIG = {
       return '';
     }
     
-    return getEnv(
-      'MONGODB_URI', 
-      `mongodb+srv://${this.username}:${this.password}@${this.cluster}/?retryWrites=true&w=majority&appName=Cluster0`
-    );
+    const uri = getEnv('MONGODB_URI');
+    if (uri) return uri;
+    
+    return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/${this.dbName}?retryWrites=true&w=majority`;
   }
 };
 
