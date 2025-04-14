@@ -15,10 +15,10 @@ export function getEnv(key: string, defaultValue: string = ''): string {
 
 // Database configuration
 export const DB_CONFIG = {
-  username: getEnv('clubyadmin', ''),
-  password: getEnv('CpVrvxqz2sSf@N6', ''),
-  cluster: getEnv('cluster0.rvg9arm.mongodb.net', ''),
-  dbName: getEnv('Cluster0', 'cluby'),
+  username: getEnv('MONGODB_USERNAME', ''),
+  password: getEnv('MONGODB_PASSWORD', ''),
+  cluster: getEnv('MONGODB_CLUSTER', ''),
+  dbName: getEnv('MONGODB_DB_NAME', 'cluby'),
   
   // Get the full connection URI
   get uri(): string {
@@ -27,10 +27,16 @@ export const DB_CONFIG = {
       return '';
     }
     
-    const uri = getEnv('mongodb+srv://clubyadmin:CpVrvxqz2sSf@N6@cluster0.rvg9arm.mongodb.net/?appName=Cluster0');
+    const uri = getEnv('MONGODB_URI', '');
     if (uri) return uri;
     
-    return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/${this.dbName}?retryWrites=true&w=majority`;
+    // Only build from parts if no direct URI is provided
+    if (this.username && this.password && this.cluster) {
+      return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/${this.dbName}?retryWrites=true&w=majority`;
+    }
+    
+    console.warn('Incomplete MongoDB configuration, missing credentials or cluster information');
+    return '';
   }
 };
 
