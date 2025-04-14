@@ -1,4 +1,3 @@
-
 // Environment configuration
 // This centralizes environment variable management and provides fallbacks
 
@@ -15,10 +14,10 @@ export function getEnv(key: string, defaultValue: string = ''): string {
 
 // Database configuration
 export const DB_CONFIG = {
-  username: getEnv('johnwick1947', ''),
-  password: getEnv('vQeH9EY9UQSbJthu', ''),
-  cluster: getEnv('cluby', ''),
-  dbName: getEnv('cluby', 'cluby'),
+  username: 'johnnywick1947',
+  password: 'vQeH9EY9UQSbJthu',
+  cluster: 'cluby.tkfcyvx.mongodb.net',
+  dbName: 'cluby',
   
   // Get the full connection URI
   get uri(): string {
@@ -27,16 +26,7 @@ export const DB_CONFIG = {
       return '';
     }
     
-    const uri = getEnv('mongodb+srv://johnnywick1947:<vQeH9EY9UQSbJthu>@cluby.tkfcyvx.mongodb.net/?retryWrites=true&w=majority&appName=cluby', '');
-    if (uri) return uri;
-    
-    // Only build from parts if no direct URI is provided
-    if (this.username && this.password && this.cluster) {
-      return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/${this.dbName}?retryWrites=true&w=majority`;
-    }
-    
-    console.warn('Incomplete MongoDB configuration, missing credentials or cluster information');
-    return '';
+    return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/?retryWrites=true&w=majority&appName=cluby`;
   }
 };
 
