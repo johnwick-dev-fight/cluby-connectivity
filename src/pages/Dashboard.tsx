@@ -1,15 +1,14 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, Users, Briefcase, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import MongoDBStatus from '@/components/MongoDBStatus';
 
 const Dashboard = () => {
   const { user } = useAuth();
 
-  // Content based on user role
   const renderDashboardContent = () => {
     switch (user?.role) {
       case 'student':
@@ -24,10 +23,12 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {user?.profile?.full_name || user?.email}</p>
+    <div className="container mx-auto p-4 space-y-8">
+      <h1 className="text-3xl font-bold">Dashboard</h1>
+      
+      {/* MongoDB Connection Status Card */}
+      <div className="mb-8">
+        <MongoDBStatus />
       </div>
       
       {renderDashboardContent()}
@@ -315,7 +316,6 @@ const AdminDashboard = () => {
   );
 };
 
-// Helper Components
 const DashboardCard = ({ title, value, description, icon, linkTo }: { 
   title: string; 
   value: string; 

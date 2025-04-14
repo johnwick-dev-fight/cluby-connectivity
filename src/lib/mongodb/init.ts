@@ -35,14 +35,36 @@ export async function initMongoDB() {
   }
   
   try {
+    console.log('Attempting to connect to MongoDB...');
     // Connect to MongoDB
     await dbConnect();
     console.log('MongoDB initialized successfully');
+    
+    // Log connection details for debugging (but hide credentials)
+    const redactedUri = uri.replace(/:([^@]+)@/, ':****@');
+    console.log(`Connected to MongoDB at: ${redactedUri}`);
+    console.log(`MongoDB connection state: ${mongoose.connection.readyState}`);
+    
     initialized = true;
+    return true;
   } catch (error) {
     console.error('Failed to initialize MongoDB:', error);
     throw error;
   }
+}
+
+/**
+ * Check if MongoDB is currently connected
+ * Returns true if connected, false otherwise
+ */
+export function isMongoDBConnected() {
+  if (typeof window !== 'undefined') {
+    console.warn('Checking MongoDB connection status from browser environment');
+    return false;
+  }
+  
+  // 1 = connected, 0 = disconnected
+  return mongoose.connection.readyState === 1;
 }
 
 /**
