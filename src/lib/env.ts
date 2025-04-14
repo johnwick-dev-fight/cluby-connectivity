@@ -1,3 +1,4 @@
+
 // Environment configuration
 // This centralizes environment variable management and provides fallbacks
 
@@ -14,9 +15,9 @@ export function getEnv(key: string, defaultValue: string = ''): string {
 
 // Database configuration
 export const DB_CONFIG = {
-  username: getEnv('DB_USERNAME'),
-  password: getEnv('DB_PASSWORD'),
-  cluster: getEnv('DB_CLUSTER'),
+  username: getEnv('DB_USERNAME', ''),
+  password: getEnv('DB_PASSWORD', ''),
+  cluster: getEnv('DB_CLUSTER', ''),
   dbName: getEnv('DB_NAME', 'cluby'),
   
   // Get the full connection URI
