@@ -3,7 +3,7 @@ import { getEnv } from '../utils/env-utils'; // Assuming this utility exists or 
 
 export const DB_CONFIG = {
   username: 'johnnywick1947',
-  password: process.env.MONGODB_PASSWORD || '<db_password>', // Use environment variable for password
+  password: process.env.MONGODB_PASSWORD || 'password123', // Use environment variable for password
   cluster: 'cluby.tkfcyvx.mongodb.net',
   dbName: 'cluby',
   
