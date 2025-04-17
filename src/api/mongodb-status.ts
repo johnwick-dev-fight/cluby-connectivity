@@ -1,5 +1,6 @@
 
 import { initMongoDB, isMongoDBConnected } from '../lib/mongodb/init';
+import { DB_CONFIG } from '../lib/env';
 
 export async function GET() {
   try {
@@ -15,7 +16,13 @@ export async function GET() {
         connected: isConnected,
         message: isConnected 
           ? 'MongoDB is successfully connected' 
-          : 'MongoDB is not connected'
+          : 'MongoDB is not connected',
+        details: {
+          username: DB_CONFIG.username,
+          cluster: DB_CONFIG.cluster,
+          dbName: DB_CONFIG.dbName,
+          uri: `mongodb+srv://${DB_CONFIG.username}:***@${DB_CONFIG.cluster}/?retryWrites=true&w=majority&appName=cluby`
+        }
       }),
       {
         headers: {

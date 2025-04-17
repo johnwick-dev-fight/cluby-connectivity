@@ -1,6 +1,11 @@
 
-import { getEnv } from '../utils/env-utils'; // Assuming this utility exists or will be created
+// Environment configuration for MongoDB connection
+// This file provides connection details while ensuring credentials are secure
 
+// Skip execution in browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// MongoDB connection configuration
 export const DB_CONFIG = {
   username: 'johnnywick1947',
   password: process.env.MONGODB_PASSWORD || 'password123', // Use environment variable for password
@@ -8,7 +13,7 @@ export const DB_CONFIG = {
   dbName: 'cluby',
   
   get uri(): string {
-    if (typeof window !== 'undefined') {
+    if (isBrowser) {
       console.warn('Attempting to access database URI in browser environment');
       return '';
     }
@@ -16,3 +21,13 @@ export const DB_CONFIG = {
     return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/?retryWrites=true&w=majority&appName=cluby`;
   }
 };
+
+// Function to safely get environment variables
+export function getEnvVariable(key: string, defaultValue: string = ''): string {
+  if (isBrowser) {
+    console.warn(`Attempting to access environment variable (${key}) in browser`);
+    return defaultValue;
+  }
+  
+  return process.env[key] || defaultValue;
+}
