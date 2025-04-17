@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, RefreshCw, Database, Server } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Database, Server, AlertTriangle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -23,12 +23,31 @@ const MongoDBStatus = () => {
   const [status, setStatus] = useState<MongoDBStatusResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const checkConnection = async () => {
     setLoading(true);
+    setErrorMessage(null);
+    
     try {
       const response = await fetch('/api/mongodb-status');
-      const data = await response.json();
+      
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      // Try to parse the JSON response
+      let data: MongoDBStatusResponse;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        // Handle JSON parsing error
+        const text = await response.text();
+        console.error("Failed to parse JSON response:", text);
+        throw new Error(`Invalid response format: ${text.substring(0, 100)}...`);
+      }
+      
       setStatus(data);
       
       if (data.connected) {
@@ -44,11 +63,20 @@ const MongoDBStatus = () => {
         });
       }
     } catch (error) {
+      console.error("Error fetching MongoDB status:", error);
+      setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
+      
       setStatus({
         success: false,
         connected: false,
         message: 'Error checking MongoDB connection',
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
+      toast({
+        variant: "destructive",
+        title: "Error Checking MongoDB Status",
+        description: error instanceof Error ? error.message : 'Failed to check connection status',
       });
     } finally {
       setLoading(false);
@@ -91,8 +119,18 @@ const MongoDBStatus = () => {
             
             {status.error && (
               <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="text-sm">
                   {status.error}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {errorMessage && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  {errorMessage}
                 </AlertDescription>
               </Alert>
             )}
