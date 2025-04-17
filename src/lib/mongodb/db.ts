@@ -45,9 +45,9 @@ async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 10000, // Increased timeout for server selection
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000, // Added connection timeout
+      connectTimeoutMS: 10000,
       retryWrites: true,
       retryReads: true,
     };
@@ -59,7 +59,7 @@ async function dbConnect() {
       })
       .catch((error) => {
         console.error('MongoDB connection error:', error);
-        cached.promise = null; // Reset promise on error so we can retry
+        cached.promise = null;
         throw error;
       });
   }
@@ -75,3 +75,4 @@ async function dbConnect() {
 }
 
 export default dbConnect;
+
