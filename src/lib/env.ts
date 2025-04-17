@@ -7,11 +7,11 @@ const isBrowser = typeof window !== 'undefined';
 
 // MongoDB connection configuration
 export const DB_CONFIG = {
-  username: 'johnnywick1947',
-  password: isBrowser ? '' : (process.env.MONGODB_PASSWORD || 'CpVrvxqz2sSf@N6'), // Use environment variable for password
+  username: 'admin',
+  password: isBrowser ? '' : (process.env.MONGODB_PASSWORD || 'password123'), // Use environment variable for password
   cluster: 'cluby.tkfcyvx.mongodb.net',
   dbName: 'cluby',
-  
+  // mongodb+srv://admin:<db_password>@cluby.tkfcyvx.mongodb.net/?retryWrites=true&w=majority&appName=cluby
   get uri(): string {
     if (isBrowser) {
       console.warn('Attempting to access database URI in browser environment');
