@@ -25,18 +25,6 @@
     --input: 220 13% 91%;
     --ring: 262.1 83.3% 57.8%;
     --radius: 0.75rem;
-    
-    /* Custom Cluby colors */
-    --cluby-50: 262.1 83.3% 97%;
-    --cluby-100: 262.1 83.3% 92%;
-    --cluby-200: 262.1 83.3% 85%;
-    --cluby-300: 262.1 83.3% 78%;
-    --cluby-400: 262.1 83.3% 68%;
-    --cluby-500: 262.1 83.3% 57.8%;
-    --cluby-600: 262.1 93.3% 47.8%;
-    --cluby-700: 262.1 93.3% 37.8%;
-    --cluby-800: 262.1 93.3% 27.8%;
-    --cluby-900: 262.1 93.3% 17.8%;
   }
  
   .dark {
@@ -67,12 +55,28 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-150;
   }
 }
 
 @layer components {
   .cluby-container {
     @apply container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .card-hover {
+    @apply hover:bg-accent/50 dark:hover:bg-accent/10 transition-colors duration-150;
+  }
+
+  .input-dark {
+    @apply dark:bg-secondary/50 dark:border-border/50 dark:placeholder-muted-foreground/50;
+  }
+
+  .button-dark {
+    @apply dark:hover:bg-accent/20 dark:active:bg-accent/30;
+  }
+
+  .dropdown-dark {
+    @apply dark:bg-background dark:border-border/50;
   }
 }

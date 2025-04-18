@@ -159,12 +159,12 @@ const Clubs = () => {
 
 const ClubCard = ({ club }: { club: any }) => {
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow dark:border-border/50">
       <CardHeader className="p-0">
-        <div className="bg-gradient-to-r from-cluby-100 to-blue-100 h-24 relative">
+        <div className="bg-gradient-to-r from-cluby-100 to-blue-100 dark:from-cluby-900 dark:to-blue-900 h-24 relative">
           {club.featured && (
             <div className="absolute top-2 right-2">
-              <Badge className="bg-yellow-500">
+              <Badge className="bg-yellow-500 dark:bg-yellow-600">
                 <Star className="h-3 w-3 mr-1" /> Featured
               </Badge>
             </div>
@@ -172,16 +172,16 @@ const ClubCard = ({ club }: { club: any }) => {
         </div>
         <div className="flex justify-center -mt-10">
           <img 
-            src={club.logo} 
+            src={club.logo || 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=300&h=300&fit=crop'} 
             alt={club.name} 
-            className="rounded-full border-4 border-white h-20 w-20 object-cover bg-white"
+            className="rounded-full border-4 border-background dark:border-background h-20 w-20 object-cover bg-background dark:bg-background"
           />
         </div>
         <div className="text-center mt-2">
           <h3 className="font-semibold text-xl">{club.name}</h3>
           <div className="flex justify-center gap-1 mt-1 flex-wrap px-4">
             {club.tags.map((tag: string, index: number) => (
-              <Badge key={index} variant="secondary" className="text-xs">
+              <Badge key={index} variant="secondary" className="text-xs dark:bg-secondary/30">
                 {tag}
               </Badge>
             ))}
@@ -189,9 +189,9 @@ const ClubCard = ({ club }: { club: any }) => {
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-2">
-        <p className="text-sm text-gray-600 line-clamp-3">{club.description}</p>
+        <p className="text-sm text-muted-foreground line-clamp-3">{club.description}</p>
         
-        <div className="flex justify-between mt-4 text-sm text-gray-500">
+        <div className="flex justify-between mt-4 text-sm text-muted-foreground">
           <div className="flex items-center">
             <Users className="h-4 w-4 mr-1" />
             <span>{club.members}</span>
@@ -211,8 +211,8 @@ const ClubCard = ({ club }: { club: any }) => {
           <Button variant="default" className="w-full">View Club</Button>
         </Link>
         
-        <Button variant="outline" size="icon">
-          <Heart className={`h-4 w-4 ${club.isFollowing ? 'fill-red-500 text-red-500' : ''}`} />
+        <Button variant="outline" size="icon" className="dark:border-border/50">
+          <Heart className={`h-4 w-4 ${club.isFollowing ? 'fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400' : ''}`} />
         </Button>
       </CardFooter>
     </Card>
