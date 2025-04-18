@@ -1,7 +1,6 @@
 
 import mongoose, { Document, Schema } from 'mongoose';
 
-// Define Post document interface
 export interface PostDocument extends Document {
   title: string;
   content: string;
@@ -12,9 +11,14 @@ export interface PostDocument extends Document {
   is_flagged: boolean;
   created_at: Date;
   updated_at: Date;
+  likes: mongoose.Schema.Types.ObjectId[];
+  comments: {
+    user_id: mongoose.Schema.Types.ObjectId;
+    content: string;
+    created_at: Date;
+  }[];
 }
 
-// Create the schema definition
 const PostSchema = new Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
@@ -28,7 +32,13 @@ const PostSchema = new Schema({
   },
   is_flagged: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
-  updated_at: { type: Date, default: Date.now }
+  updated_at: { type: Date, default: Date.now },
+  likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  comments: [{
+    user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    content: { type: String, required: true },
+    created_at: { type: Date, default: Date.now }
+  }]
 });
 
 // Only attempt to create/export the model when running on the server

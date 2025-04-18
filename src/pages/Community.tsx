@@ -4,7 +4,7 @@ import { getPosts } from '@/lib/mongodb/services/postService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, MessageSquare, Share2, Heart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CreatePostDialog from '@/components/community/CreatePostDialog';
 import PostFilters from '@/components/community/PostFilters';
@@ -51,6 +51,8 @@ const Community = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const canCreatePost = user?.role === 'clubRepresentative' || user?.role === 'admin';
 
   const { data: posts, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['posts', activeFilter, searchTerm],
@@ -126,7 +128,7 @@ const Community = () => {
           </p>
         </div>
         
-        {user && (
+        {canCreatePost && (
           <Button onClick={() => setIsDialogOpen(true)}>
             Create Post
           </Button>
@@ -195,9 +197,30 @@ const Community = () => {
                   </div>
                 )}
                 
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <span className="mr-4">{post._count?.likes || 0} likes</span>
-                  <span>{post._count?.comments || 0} comments</span>
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t">
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <Heart className="h-4 w-4" />
+                    <span>{post._count?.likes || 0}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <span>{post._count?.comments || 0}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="gap-2" onClick={() => {
+                    navigator.share?.({
+                      title: post.title,
+                      text: post.content,
+                      url: window.location.href
+                    }).catch(() => {
+                      toast({
+                        title: "Sharing not supported",
+                        description: "Your browser doesn't support native sharing"
+                      });
+                    });
+                  }}>
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -210,16 +233,18 @@ const Community = () => {
               ? `No posts found matching "${searchTerm}". Try a different search term.` 
               : activeFilter !== 'all' 
                 ? `No posts found with the "${activeFilter}" filter.` 
-                : "No posts found. Be the first to create a post!"
+                : "No posts found in the community yet."
           } 
         />
       )}
 
-      <CreatePostDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen}
-        onSuccess={handlePostSuccess}
-      />
+      {canCreatePost && (
+        <CreatePostDialog 
+          open={isDialogOpen} 
+          onOpenChange={setIsDialogOpen}
+          onSuccess={handlePostSuccess}
+        />
+      )}
     </div>
   );
 };
