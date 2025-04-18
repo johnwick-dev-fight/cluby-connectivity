@@ -27,5 +27,18 @@ const ApplicationSchema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Check if model already exists (for development with hot reloading)
-export default mongoose.models.Application || mongoose.model<ApplicationDocument>('Application', ApplicationSchema);
+// Safely check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// Safely export the model, using a different approach to handle browser vs server
+let ApplicationModel;
+
+if (!isBrowser) {
+  // Server-side: We can safely work with mongoose models
+  ApplicationModel = mongoose.models.Application || mongoose.model<ApplicationDocument>('Application', ApplicationSchema);
+} else {
+  // Browser-side: Don't attempt to create the model
+  ApplicationModel = {} as any; // Provide a placeholder for the browser
+}
+
+export default ApplicationModel;
