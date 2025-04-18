@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Filter } from 'lucide-react';
 
-// Mock data for recruitment positions
 const MOCK_POSITIONS = [
   {
     id: '1',
@@ -67,10 +66,12 @@ const MOCK_POSITIONS = [
 ];
 
 const Recruitment = () => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [clubFilter, setClubFilter] = useState('all');
   
-  // Filter positions based on search term and club filter
+  const isCRP = user?.role === 'clubRepresentative';
+  
   const filteredPositions = MOCK_POSITIONS.filter(position => {
     const matchesSearch = position.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           position.club.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,7 +90,14 @@ const Recruitment = () => {
           <h1 className="text-3xl font-bold">Recruitment</h1>
           <p className="text-muted-foreground">Find open positions in campus clubs and organizations</p>
         </div>
-        <Button className="self-end md:self-auto">Post a Position</Button>
+        {isCRP && (
+          <Button 
+            className="self-end md:self-auto"
+            onClick={() => navigate('/recruitment/create')}
+          >
+            Post a Position
+          </Button>
+        )}
       </div>
       
       <div className="flex flex-col sm:flex-row gap-3">

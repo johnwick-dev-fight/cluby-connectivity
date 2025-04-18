@@ -6,6 +6,8 @@ import { CalendarDays, Users, BarChart, BookOpen, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import StudentApplications from '@/components/dashboard/StudentApplications';
+import CRPRecruitment from '@/components/dashboard/CRPRecruitment';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -107,6 +109,16 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Show applications for students */}
+      {user?.role === 'student' && (
+        <StudentApplications />
+      )}
+      
+      {/* Show recruitment management for CRPs */}
+      {user?.role === 'clubRepresentative' && (
+        <CRPRecruitment />
+      )}
       
       {/* Admin Section */}
       {user?.role === 'admin' && (
