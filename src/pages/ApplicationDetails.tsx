@@ -6,7 +6,7 @@ import { getRecruitmentById } from '@/lib/mongodb/services/recruitmentService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import ApplyForm from '@/components/recruitment/ApplyForm';
-import { RecruitmentNotFound } from '@/components/errors/RecruitmentNotFound';
+import RecruitmentNotFound from '@/components/errors/RecruitmentNotFound';
 
 const ApplicationDetails = () => {
   const { id } = useParams();

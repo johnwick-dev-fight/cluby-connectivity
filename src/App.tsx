@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   createBrowserRouter,
@@ -17,6 +18,16 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminClubApprovals from './pages/admin/AdminClubApprovals';
 import AdminOverview from './pages/admin/AdminOverview';
 import ApplicationDetails from './pages/ApplicationDetails';
+
+// Mock position data for ApplicationForm
+const mockPosition = {
+  id: "1",
+  title: "Web Developer",
+  club: "Programming Club",
+  description: "Looking for experienced web developers to join our team",
+  requirements: "HTML, CSS, JavaScript, React experience required",
+  deadline: "2025-05-30"
+};
 
 function App() {
   return (
@@ -94,7 +105,7 @@ function App() {
           path: "/recruitment/:id",
           element: (
             <MainLayout>
-              <ApplicationForm />
+              <ApplicationForm position={mockPosition} />
             </MainLayout>
           ),
         },
