@@ -166,7 +166,9 @@ const Recruitment = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end">
-                  <Button>Apply Now</Button>
+                  <Button onClick={() => navigate(`/recruitment/${position.id}/apply`)}>
+                    Apply Now
+                  </Button>
                 </div>
               </CardContent>
             </Card>
