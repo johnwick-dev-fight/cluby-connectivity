@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 
@@ -18,6 +17,7 @@ export interface User {
   id: string;
   email: string;
   role: UserRole;
+  club_id?: string; // Added this property for club representatives
   profile?: Profile;
 }
 
@@ -64,6 +64,7 @@ const MOCK_USERS = [
     email: 'club_rep@gmail.com',
     password: 'password123',
     role: 'clubRepresentative' as UserRole,
+    club_id: '1', // Added club_id for club representative
     profile: {
       id: '2',
       full_name: 'Club Representative',
@@ -140,6 +141,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 id: mockUser.id,
                 email: mockUser.email,
                 role: mockUser.role,
+                club_id: mockUser.club_id,
                 profile: mockUser.profile
               });
               
@@ -177,6 +179,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             id: mockUser.id,
             email: mockUser.email,
             role: mockUser.role,
+            club_id: mockUser.club_id, // Include club_id
             profile: mockUser.profile
           });
         }
@@ -210,6 +213,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         id: user.id,
         email: user.email,
         role: user.role,
+        club_id: user.club_id, // Include club_id when setting user
         profile: user.profile
       });
       
