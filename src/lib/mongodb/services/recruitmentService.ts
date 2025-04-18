@@ -1,4 +1,3 @@
-
 import dbConnect from '../db';
 import Recruitment from '../models/Recruitment';
 import Application from '../models/Application';

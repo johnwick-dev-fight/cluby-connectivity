@@ -31,5 +31,18 @@ const RecruitmentSchema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Check if model already exists (for development with hot reloading)
-export default mongoose.models.Recruitment || mongoose.model<RecruitmentDocument>('Recruitment', RecruitmentSchema);
+// Safely check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// Safely export the model, using a different approach to handle browser vs server
+let RecruitmentModel;
+
+if (!isBrowser) {
+  // Server-side: We can safely work with mongoose models
+  RecruitmentModel = mongoose.models.Recruitment || mongoose.model<RecruitmentDocument>('Recruitment', RecruitmentSchema);
+} else {
+  // Browser-side: Don't attempt to create the model
+  RecruitmentModel = {} as any; // Provide a placeholder for the browser
+}
+
+export default RecruitmentModel;

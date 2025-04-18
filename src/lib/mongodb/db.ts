@@ -3,14 +3,16 @@ import mongoose from 'mongoose';
 import { DB_CONFIG } from '../env';
 
 // Prevent MongoDB connection in browser environment
-if (typeof window !== 'undefined') {
+const isBrowser = typeof window !== 'undefined';
+
+if (isBrowser) {
   console.warn('MongoDB connections should only be established in API routes, not in the browser');
 }
 
 // Get the MongoDB URI from environment variables or config
-const MONGODB_URI = typeof window === 'undefined' ? DB_CONFIG.uri : '';
+const MONGODB_URI = !isBrowser ? DB_CONFIG.uri : '';
 
-if (!MONGODB_URI && typeof window === 'undefined') {
+if (!MONGODB_URI && !isBrowser) {
   console.error('Missing MongoDB connection string');
 }
 
@@ -22,7 +24,7 @@ interface CachedConnection {
 // Create a cached connection variable in a browser-safe way
 let cached: CachedConnection = { conn: null, promise: null };
 
-if (typeof window === 'undefined') {
+if (!isBrowser) {
   const globalAny = globalThis as any;
   if (!globalAny.mongooseCache) {
     globalAny.mongooseCache = cached;
@@ -33,7 +35,7 @@ if (typeof window === 'undefined') {
 
 async function dbConnect() {
   // Prevent connections in browser environment
-  if (typeof window !== 'undefined') {
+  if (isBrowser) {
     console.warn('Attempted to connect to MongoDB from the browser');
     return null;
   }
@@ -75,4 +77,3 @@ async function dbConnect() {
 }
 
 export default dbConnect;
-

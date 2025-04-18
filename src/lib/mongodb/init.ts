@@ -3,15 +3,21 @@ import dbConnect from './db';
 import mongoose from 'mongoose';
 import { DB_CONFIG } from '../env';
 
-// Models
-import './models/User';
-import './models/Profile';
-import './models/Club';
-import './models/Event';
-import './models/Post';
-import './models/Application';
-import './models/ClubMembership';
-import './models/Recruitment';
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// Only import models on the server side
+if (!isBrowser) {
+  // Models - these should only be loaded server-side
+  require('./models/User');
+  require('./models/Profile');
+  require('./models/Club');
+  require('./models/Event');
+  require('./models/Post');
+  require('./models/Application');
+  require('./models/ClubMembership');
+  require('./models/Recruitment');
+}
 
 // Cache to prevent multiple initialization attempts
 let initialized = false;
@@ -23,7 +29,7 @@ let initialized = false;
  */
 export async function initMongoDB() {
   // Skip if already initialized or in browser environment
-  if (initialized || typeof window !== 'undefined') {
+  if (initialized || isBrowser) {
     return;
   }
   
@@ -58,7 +64,7 @@ export async function initMongoDB() {
  * Returns true if connected, false otherwise
  */
 export function isMongoDBConnected() {
-  if (typeof window !== 'undefined') {
+  if (isBrowser) {
     console.warn('Checking MongoDB connection status from browser environment');
     return false;
   }
@@ -71,7 +77,7 @@ export function isMongoDBConnected() {
  * Safely close the MongoDB connection when the application is shutting down
  */
 export async function closeMongoDB() {
-  if (typeof window !== 'undefined') {
+  if (isBrowser) {
     return;
   }
   
