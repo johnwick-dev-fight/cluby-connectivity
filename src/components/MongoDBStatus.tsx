@@ -30,7 +30,7 @@ const MongoDBStatus = () => {
     setErrorMessage(null);
     
     try {
-      const response = await fetch('/api/mongodb-status');
+      const response = await fetch('/api/mongodb-status/route');
       
       // Check if response is ok before parsing JSON
       if (!response.ok) {
