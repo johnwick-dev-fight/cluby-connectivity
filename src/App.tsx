@@ -39,107 +39,133 @@ function App() {
         },
         {
           path: "/",
-          element: (
-            <MainLayout>
-              <Dashboard />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <Dashboard />
+            }
+          ]
         },
         {
           path: "/dashboard",
-          element: (
-            <MainLayout>
-              <Dashboard />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <Dashboard />
+            }
+          ]
         },
         {
           path: "/profile",
-          element: (
-            <MainLayout>
-              <Profile />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <Profile />
+            }
+          ]
         },
         {
           path: "/clubs",
-          element: (
-            <MainLayout>
-              <Clubs />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <Clubs />
+            }
+          ]
         },
         {
           path: "/events",
-          element: (
-            <MainLayout>
-              <Events />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <Events />
+            }
+          ]
         },
         {
           path: "/community",
-          element: (
-            <MainLayout>
-              <Community />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <Community />
+            }
+          ]
         },
         {
           path: "/recruit",
-          element: (
-            <MainLayout>
-              <Recruitment />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <Recruitment />
+            }
+          ]
         },
         {
           path: "/recruitment/create",
-          element: (
-            <MainLayout>
-              <CreateRecruitment />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <CreateRecruitment />
+            }
+          ]
         },
         {
           path: "/recruitment/:id",
-          element: (
-            <MainLayout>
-              <ApplicationForm position={mockPosition} />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <ApplicationForm position={mockPosition} />
+            }
+          ]
         },
         {
           path: "/admin/users",
-          element: (
-            <MainLayout>
-              <AdminUsers />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <AdminUsers />
+            }
+          ]
         },
         {
           path: "/admin/club-approvals",
-          element: (
-            <MainLayout>
-              <AdminClubApprovals />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <AdminClubApprovals />
+            }
+          ]
         },
         {
           path: "/admin/overview",
-          element: (
-            <MainLayout>
-              <AdminOverview />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <AdminOverview />
+            }
+          ]
         },
         {
           path: "/recruitment/:id/apply",
-          element: (
-            <MainLayout>
-              <ApplicationDetails />
-            </MainLayout>
-          ),
+          element: <MainLayout />,
+          children: [
+            {
+              index: true,
+              element: <ApplicationDetails />
+            }
+          ]
         },
       ])}
     />
