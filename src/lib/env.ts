@@ -6,8 +6,8 @@ const isBrowser = typeof window !== 'undefined';
 
 // MongoDB connection configuration
 export const DB_CONFIG = {
-  username: 'admin',
-  password: isBrowser ? '' : (process.env.MONGODB_PASSWORD || 'password123'),
+  username: 'Singh',
+  password: isBrowser ? '' : (process.env.MONGODB_PASSWORD || '4DrhdSXblcVKPMYF'),
   cluster: 'cluby.tkfcyvx.mongodb.net',
   dbName: 'cluby',
   // Connection string format
