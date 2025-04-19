@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import StudentApplications from '@/components/dashboard/StudentApplications';
 import CRPRecruitment from '@/components/dashboard/CRPRecruitment';
+import SeedDatabase from '@/components/admin/SeedDatabase';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -125,6 +126,14 @@ const Dashboard = () => {
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Admin Controls</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Database Management</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <SeedDatabase />
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">User Management</CardTitle>
