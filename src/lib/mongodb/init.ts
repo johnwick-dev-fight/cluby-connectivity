@@ -42,6 +42,8 @@ export async function initMongoDB() {
   
   try {
     console.log('Attempting to connect to MongoDB...');
+    console.log(`Connection details: Username=${DB_CONFIG.username}, Cluster=${DB_CONFIG.cluster}, DB=${DB_CONFIG.dbName}`);
+    
     // Connect to MongoDB
     await dbConnect();
     console.log('MongoDB initialized successfully');

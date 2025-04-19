@@ -37,10 +37,12 @@ const MongoDBStatus = () => {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       
-      // Try to parse the JSON response
+      // Clone the response before parsing it to avoid "body stream already read" error
+      const responseClone = response.clone();
       let data: MongoDBStatusResponse;
+      
       try {
-        data = await response.json();
+        data = await responseClone.json();
       } catch (parseError) {
         // Handle JSON parsing error
         const text = await response.text();

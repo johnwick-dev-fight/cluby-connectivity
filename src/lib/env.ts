@@ -1,3 +1,4 @@
+
 // Environment configuration for MongoDB connection
 // This file provides connection details while ensuring credentials are secure
 
@@ -7,7 +8,7 @@ const isBrowser = typeof window !== 'undefined';
 // MongoDB connection configuration
 export const DB_CONFIG = {
   username: 'Singh',
-  password: isBrowser ? '' : (process.env.MONGODB_PASSWORD || '4DrhdSXblcVKPMYF'),
+  password: isBrowser ? '' : (process.env.MONGODB_PASSWORD || 'your_password_here'),
   cluster: 'cluby.tkfcyvx.mongodb.net',
   dbName: 'cluby',
   // Connection string format
