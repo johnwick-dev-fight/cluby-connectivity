@@ -13,7 +13,7 @@ import Community from './pages/Community';
 import Recruitment from './pages/Recruitment';
 import CreateRecruitment from './pages/CreateRecruitment';
 import ApplicationForm from './components/recruitment/ApplicationForm';
-import MainLayout from './layouts/MainLayout';
+import MainLayout from './components/layout/MainLayout';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminClubApprovals from './pages/admin/AdminClubApprovals';
 import AdminOverview from './pages/admin/AdminOverview';
