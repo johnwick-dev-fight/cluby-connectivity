@@ -8,9 +8,19 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  defaultTheme?: Theme;
+  storageKey?: string;
+}
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ 
+  children, 
+  defaultTheme = 'light',
+  storageKey = 'theme'
+}) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       // Check system preference first
@@ -18,12 +28,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return 'dark';
       }
       // Then check localStorage
-      const savedTheme = localStorage.getItem('theme') as Theme;
+      const savedTheme = localStorage.getItem(storageKey) as Theme;
       if (savedTheme) {
         return savedTheme;
       }
     }
-    return 'light';
+    return defaultTheme;
   });
 
   useEffect(() => {
@@ -33,8 +43,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    localStorage.setItem(storageKey, theme);
+  }, [theme, storageKey]);
 
   // Listen for system theme changes
   useEffect(() => {
