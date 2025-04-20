@@ -1,13 +1,29 @@
 
-import React from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/layout/Navbar';
 import Sidebar from '@/components/layout/Sidebar';
 import { Loader2 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 const MainLayout: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshUser } = useAuth();
+  const navigate = useNavigate();
+
+  // Refresh user data on mount
+  useEffect(() => {
+    if (!isLoading && user) {
+      refreshUser().catch(error => {
+        console.error("Error refreshing user data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to refresh user data. Please try again.",
+          variant: "destructive"
+        });
+      });
+    }
+  }, []);
 
   // Show loading state
   if (isLoading) {
@@ -30,7 +46,7 @@ const MainLayout: React.FC = () => {
       <Navbar />
       <div className="flex flex-1">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto p-4">
           <div className="cluby-container">
             <Outlet />
           </div>

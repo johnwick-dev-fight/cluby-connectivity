@@ -10,9 +10,9 @@ const getEnv = (key: string, defaultValue: string = ''): string => {
     return defaultValue;
   }
   try {
-    return (typeof process !== 'undefined' && process.env && process.env[key]) || defaultValue;
+    return (globalThis?.process?.env && globalThis.process.env[key]) || defaultValue;
   } catch (e) {
-    console.warn(`Error accessing process.env.${key}:`, e);
+    console.warn(`Error accessing environment variable ${key}:`, e);
     return defaultValue;
   }
 };
@@ -29,7 +29,6 @@ export const MONGODB_CONFIG = {
   // Construct the connection URI
   get uri() {
     if (isBrowser) {
-      console.warn('Attempting to access MongoDB URI in browser environment');
       return '';
     }
     return `mongodb+srv://${this.username}:${this.password}@${this.cluster}/${this.options}`;
@@ -39,7 +38,6 @@ export const MONGODB_CONFIG = {
 // Export a method to get the connection string
 export function getMongoURI(): string {
   if (isBrowser) {
-    console.warn('Attempting to access MongoDB URI in browser environment');
     return '';
   }
   

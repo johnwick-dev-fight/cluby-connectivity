@@ -6,7 +6,11 @@ import { DB_CONFIG } from '../env';
 const isBrowser = typeof window !== 'undefined';
 
 if (isBrowser) {
-  console.warn('MongoDB connections should only be established in API routes, not in the browser');
+  // This is just a warning, not an error that should break anything
+  // We'll make it less alarming for users
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('MongoDB connections should only be established in API routes, not in the browser');
+  }
 }
 
 // Get the MongoDB URI from environment variables or config
@@ -36,7 +40,6 @@ if (!isBrowser) {
 async function dbConnect() {
   // Prevent connections in browser environment
   if (isBrowser) {
-    console.warn('Attempted to connect to MongoDB from the browser');
     return null;
   }
 

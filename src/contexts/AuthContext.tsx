@@ -50,124 +50,63 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [session, setSession] = useState<{ access_token: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on load
+  // Set up auth state listener
   useEffect(() => {
-    const checkAuth = async () => {
-      setIsLoading(true);
-      
-      try {
-        // Get current session from Supabase
-        const { data: { session: supabaseSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          setUser(null);
-          setSession(null);
-          setIsLoading(false);
-        } else if (supabaseSession) {
-          // Session exists, retrieve user data
-          const { data: userData, error: userError } = await supabase
-            .from('profiles')
-            .select('*, clubs(*)')
-            .eq('id', supabaseSession.user.id)
-            .single();
-            
-          if (userError) {
-            console.error('Error fetching user profile:', userError);
-            setIsLoading(false);
-          } else {
-            // Determine user role
-            let role: UserRole = 'student';
-            let club_id: string | undefined = undefined;
-            
-            // Check if user is a club representative
-            const { data: clubRep } = await supabase
-              .from('clubs')
-              .select('id')
-              .eq('representative_id', supabaseSession.user.id)
-              .single();
-              
-            if (clubRep) {
-              role = 'clubRepresentative';
-              club_id = clubRep.id;
-            } else {
-              // Check if user is an admin (this could be a separate table or column)
-              // For this example, we'll check email domains
-              if (supabaseSession.user.email?.endsWith('@cluby.com')) {
-                role = 'admin';
-              }
-            }
-            
-            setUser({
-              id: supabaseSession.user.id,
-              email: supabaseSession.user.email || '',
-              role,
-              club_id,
-              profile: userData as Profile
-            });
-            
-            setSession({ access_token: supabaseSession.access_token });
-            setIsLoading(false);
-          }
-        } else {
-          setUser(null);
-          setSession(null);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Authentication check error:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    checkAuth();
-    
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, supabaseSession) => {
         console.log("Auth state change:", event);
         
-        if (event === 'SIGNED_IN' && supabaseSession) {
-          // Wait for a tick to avoid state update conflicts
-          setTimeout(async () => {
-            try {
-              const { data: userData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', supabaseSession.user.id)
-                .single();
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (supabaseSession) {
+            setSession({ access_token: supabaseSession.access_token });
+            
+            // Use setTimeout to prevent deadlocks with Supabase auth
+            setTimeout(async () => {
+              try {
+                const userData = supabaseSession.user;
                 
-              let role: UserRole = 'student';
-              let club_id: string | undefined = undefined;
-              
-              const { data: clubRep } = await supabase
-                .from('clubs')
-                .select('id')
-                .eq('representative_id', supabaseSession.user.id)
-                .single();
+                if (!userData) return;
                 
-              if (clubRep) {
-                role = 'clubRepresentative';
-                club_id = clubRep.id;
-              } else if (supabaseSession.user.email?.endsWith('@cluby.com')) {
-                role = 'admin';
+                // Get user profile
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', userData.id)
+                  .single();
+                
+                // Determine user role
+                let role: UserRole = userData.user_metadata?.role || 'student';
+                let club_id: string | undefined = undefined;
+                
+                // Check if user is a club representative
+                const { data: clubRep } = await supabase
+                  .from('clubs')
+                  .select('id')
+                  .eq('representative_id', userData.id)
+                  .single();
+                  
+                if (clubRep) {
+                  role = 'clubRepresentative';
+                  club_id = clubRep.id;
+                } else if (userData.email?.endsWith('@cluby.com')) {
+                  role = 'admin';
+                }
+                
+                setUser({
+                  id: userData.id,
+                  email: userData.email || '',
+                  role,
+                  club_id,
+                  profile: profile as Profile
+                });
+                
+                setIsLoading(false);
+              } catch (error) {
+                console.error('Error fetching user data:', error);
+                setIsLoading(false);
               }
-              
-              setUser({
-                id: supabaseSession.user.id,
-                email: supabaseSession.user.email || '',
-                role,
-                club_id,
-                profile: userData as Profile
-              });
-              
-              setSession({ access_token: supabaseSession.access_token });
-              setIsLoading(false);
-            } catch (error) {
-              console.error('Error updating user on auth change:', error);
-              setIsLoading(false);
-            }
-          }, 0);
+            }, 0);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setSession(null);
@@ -175,6 +114,67 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
       }
     );
+    
+    // Check for existing session on load
+    const checkAuth = async () => {
+      try {
+        const { data: { session: supabaseSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (supabaseSession) {
+          setSession({ access_token: supabaseSession.access_token });
+          
+          const userData = supabaseSession.user;
+          
+          if (userData) {
+            // Get user profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userData.id)
+              .single();
+            
+            // Determine user role
+            let role: UserRole = userData.user_metadata?.role || 'student';
+            let club_id: string | undefined = undefined;
+            
+            // Check if user is a club representative
+            const { data: clubRep } = await supabase
+              .from('clubs')
+              .select('id')
+              .eq('representative_id', userData.id)
+              .single();
+              
+            if (clubRep) {
+              role = 'clubRepresentative';
+              club_id = clubRep.id;
+            } else if (userData.email?.endsWith('@cluby.com')) {
+              role = 'admin';
+            }
+            
+            setUser({
+              id: userData.id,
+              email: userData.email || '',
+              role,
+              club_id,
+              profile: profile as Profile
+            });
+          }
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    checkAuth();
     
     return () => {
       subscription.unsubscribe();
@@ -190,15 +190,18 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       const { data: { user: supabaseUser } } = await supabase.auth.getUser(session.access_token);
       
       if (supabaseUser) {
-        const { data: userData } = await supabase
+        // Get user profile
+        const { data: profile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', supabaseUser.id)
           .single();
-          
-        let role: UserRole = 'student';
+        
+        // Determine user role
+        let role: UserRole = supabaseUser.user_metadata?.role || 'student';
         let club_id: string | undefined = undefined;
         
+        // Check if user is a club representative
         const { data: clubRep } = await supabase
           .from('clubs')
           .select('id')
@@ -217,9 +220,10 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           email: supabaseUser.email || '',
           role,
           club_id,
-          profile: userData as Profile
+          profile: profile as Profile
         });
       }
+      
       setIsLoading(false);
     } catch (error) {
       console.error('Error refreshing user:', error);
@@ -289,7 +293,8 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         password,
         options: {
           data: {
-            full_name: name
+            full_name: name,
+            role: role
           }
         }
       });

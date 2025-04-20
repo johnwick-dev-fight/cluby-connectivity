@@ -12,9 +12,9 @@ const getEnv = (key: string, defaultValue: string = ''): string => {
   }
   // Use a try-catch to safely access process.env in server environments
   try {
-    return (typeof process !== 'undefined' && process.env && process.env[key]) || defaultValue;
+    return (globalThis?.process?.env && globalThis.process.env[key]) || defaultValue;
   } catch (e) {
-    console.warn(`Error accessing process.env.${key}:`, e);
+    console.warn(`Error accessing environment variable ${key}:`, e);
     return defaultValue;
   }
 };
@@ -28,7 +28,6 @@ export const DB_CONFIG = {
   // Connection string format
   get uri(): string {
     if (isBrowser) {
-      console.warn('Attempting to access database URI in browser environment');
       return '';
     }
     

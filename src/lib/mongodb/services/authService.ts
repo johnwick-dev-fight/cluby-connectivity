@@ -1,9 +1,11 @@
 
 import dbConnect from '../db';
-import User from '../models/User';
-import Profile from '../models/Profile';
-import bcrypt from 'bcryptjs';
+import { supabase } from '@/integrations/supabase/client';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+
+// Safe check for browser environment
+const isBrowser = typeof window !== 'undefined';
 
 export interface UserCredentials {
   email: string;
@@ -25,216 +27,163 @@ export interface RegistrationData {
   role: 'student' | 'clubRepresentative' | 'admin';
 }
 
-// Safely check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined';
-
-const JWT_SECRET = isBrowser ? 'fake-secret' : (process.env.JWT_SECRET || 'your-secret-key');
-
-/**
- * Register a new user
- */
+// Hybrid approach - using Supabase for auth but MongoDB for user data
 export async function registerUser(userData: RegistrationData): Promise<AuthResponse> {
   if (isBrowser) {
-    console.warn('Attempted to call registerUser from browser');
-    return {
-      success: false,
-      message: 'Authentication failed: Server-side function called from client'
-    };
-  }
-
-  try {
-    await dbConnect();
-    
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: userData.email });
-    
-    if (existingUser) {
-      return {
-        success: false,
-        message: 'Email already registered'
-      };
-    }
-    
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(userData.password, salt);
-    
-    // Create new user
-    const user = new User({
-      email: userData.email,
-      password: hashedPassword,
-      role: userData.role
-    });
-    
-    await user.save();
-    
-    // Create profile for the user
-    const profile = new Profile({
-      user_id: user._id,
-      full_name: userData.name,
-      username: userData.email.split('@')[0]
-    });
-    
-    await profile.save();
-    
-    // If registering as club representative, create a pending club
-    if (userData.role === 'clubRepresentative') {
-      const Club = require('../models/Club').default;
-      const club = new Club({
-        name: 'New Club (Please Update)',
-        representative_id: user._id,
-        status: 'pending'
+    // Use Supabase client for browser
+    try {
+      // Register with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.name,
+            role: userData.role
+          }
+        }
       });
       
-      await club.save();
+      if (error) throw error;
       
-      // Associate club with user
-      user.club_id = club._id;
-      await user.save();
+      // Create profile in Supabase
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            full_name: userData.name,
+            username: userData.email.split('@')[0]
+          });
+          
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+        
+        // If registering as club representative, create a pending club
+        if (userData.role === 'clubRepresentative') {
+          const { error: clubError } = await supabase
+            .from('clubs')
+            .insert({
+              name: 'New Club (Please Update)',
+              representative_id: data.user.id,
+              status: 'pending'
+            });
+            
+          if (clubError) {
+            console.error('Error creating club:', clubError);
+          }
+        }
+      }
+      
+      return {
+        success: true,
+        message: 'User registered successfully',
+        user: data.user
+      };
+    } catch (error: any) {
+      console.error('Supabase registration error:', error);
+      return {
+        success: false,
+        message: error.message || 'Registration failed',
+        error
+      };
     }
-    
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-    
-    return {
-      success: true,
-      message: 'User registered successfully',
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role
-      },
-      token
-    };
-  } catch (error) {
-    console.error('Registration error:', error);
+  } else {
+    // Server-side logic would use MongoDB directly
+    // This won't be called from the browser
     return {
       success: false,
-      message: 'Registration failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Server-side registration is not implemented in this version',
     };
   }
 }
 
-/**
- * Authenticate a user with email and password
- */
 export async function loginUser(credentials: UserCredentials): Promise<AuthResponse> {
   if (isBrowser) {
-    console.warn('Attempted to call loginUser from browser');
-    return {
-      success: false,
-      message: 'Authentication failed: Server-side function called from client'
-    };
-  }
-
-  try {
-    await dbConnect();
-    
-    // Find user by email
-    const user = await User.findOne({ email: credentials.email }).populate('club_id');
-    
-    if (!user) {
+    // Use Supabase client for browser
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password
+      });
+      
+      if (error) throw error;
+      
+      return {
+        success: true,
+        message: 'Login successful',
+        user: data.user,
+        token: data.session?.access_token
+      };
+    } catch (error: any) {
+      console.error('Supabase login error:', error);
       return {
         success: false,
-        message: 'Invalid credentials'
+        message: error.message || 'Invalid credentials',
+        error
       };
     }
-    
-    // Check password
-    const isMatch = await bcrypt.compare(credentials.password, user.password);
-    
-    if (!isMatch) {
-      return {
-        success: false,
-        message: 'Invalid credentials'
-      };
-    }
-    
-    // Get user profile
-    const profile = await Profile.findOne({ user_id: user._id });
-    
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-    
-    return {
-      success: true,
-      message: 'Login successful',
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        club_id: user.club_id ? user.club_id._id : undefined,
-        profile: profile
-      },
-      token
-    };
-  } catch (error) {
-    console.error('Login error:', error);
+  } else {
+    // Server-side logic would use MongoDB directly
+    // This won't be called from the browser
     return {
       success: false,
-      message: 'Login failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Server-side login is not implemented in this version',
     };
   }
 }
 
-/**
- * Get user data by token
- */
 export async function getUserByToken(token: string): Promise<AuthResponse> {
   if (isBrowser) {
-    console.warn('Attempted to call getUserByToken from browser');
-    return {
-      success: false,
-      message: 'Authentication failed: Server-side function called from client'
-    };
-  }
-
-  try {
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    
-    await dbConnect();
-    
-    // Find user by id
-    const user = await User.findById(decoded.id).populate('club_id');
-    
-    if (!user) {
+    // Use Supabase client for browser
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      
+      if (error) throw error;
+      
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+      
+      // Get user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+      }
+      
+      return {
+        success: true,
+        message: 'User retrieved successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.user_metadata?.role || 'student',
+          profile
+        }
+      };
+    } catch (error: any) {
+      console.error('Supabase get user error:', error);
       return {
         success: false,
-        message: 'User not found'
+        message: error.message || 'Failed to get user',
+        error
       };
     }
-    
-    // Get user profile
-    const profile = await Profile.findOne({ user_id: user._id });
-    
-    return {
-      success: true,
-      message: 'User retrieved successfully',
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        club_id: user.club_id ? user.club_id._id : undefined,
-        profile: profile
-      }
-    };
-  } catch (error) {
-    console.error('Get user error:', error);
+  } else {
+    // Server-side logic would use MongoDB directly
+    // This won't be called from the browser
     return {
       success: false,
-      message: 'Failed to get user',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Server-side user retrieval is not implemented in this version',
     };
   }
 }

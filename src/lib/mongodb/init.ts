@@ -8,15 +8,19 @@ const isBrowser = typeof window !== 'undefined';
 
 // Only import models on the server side
 if (!isBrowser) {
-  // Models - these should only be loaded server-side
-  require('./models/User');
-  require('./models/Profile');
-  require('./models/Club');
-  require('./models/Event');
-  require('./models/Post');
-  require('./models/Application');
-  require('./models/ClubMembership');
-  require('./models/Recruitment');
+  try {
+    // Models - these should only be loaded server-side
+    require('./models/User');
+    require('./models/Profile');
+    require('./models/Club');
+    require('./models/Event');
+    require('./models/Post');
+    require('./models/Application');
+    require('./models/ClubMembership');
+    require('./models/Recruitment');
+  } catch (error) {
+    console.error('Error loading MongoDB models:', error);
+  }
 }
 
 // Cache to prevent multiple initialization attempts
@@ -67,7 +71,6 @@ export async function initMongoDB() {
  */
 export function isMongoDBConnected() {
   if (isBrowser) {
-    console.warn('Checking MongoDB connection status from browser environment');
     return false;
   }
   
@@ -95,14 +98,8 @@ export async function closeMongoDB() {
 export { dbConnect };
 
 // Register cleanup handlers for graceful shutdown
-if (typeof process !== 'undefined') {
-  process.on('SIGINT', async () => {
+if (typeof globalThis !== 'undefined' && 'addEventListener' in globalThis) {
+  globalThis.addEventListener('beforeunload', async () => {
     await closeMongoDB();
-    process.exit(0);
-  });
-  
-  process.on('SIGTERM', async () => {
-    await closeMongoDB();
-    process.exit(0);
   });
 }
