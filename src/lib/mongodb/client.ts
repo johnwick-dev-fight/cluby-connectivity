@@ -5,10 +5,23 @@ import { DB_CONFIG } from '../env';
 // Check browser environment
 const isBrowser = typeof window !== 'undefined';
 
+// Safe way to access environment variables
+const getEnv = (key: string, defaultValue: string = ''): string => {
+  if (isBrowser) {
+    return defaultValue;
+  }
+  try {
+    return (typeof process !== 'undefined' && process.env && process.env[key]) || defaultValue;
+  } catch (e) {
+    console.warn(`Error accessing process.env.${key}:`, e);
+    return defaultValue;
+  }
+};
+
 // MongoDB connection string from environment variables
 const MONGODB_URI = isBrowser ? 
   '' : // Empty string in browser
-  (process.env.MONGODB_URI || DB_CONFIG.uri);
+  (getEnv('MONGODB_URI') || DB_CONFIG.uri);
 
 if (!isBrowser && !MONGODB_URI) {
   console.error('Missing MongoDB connection string');

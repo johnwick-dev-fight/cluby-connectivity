@@ -1,7 +1,7 @@
 
 import dbConnect from '../db';
-import { User } from '../models/User';
-import { Profile } from '../models/Profile';
+import User from '../models/User';
+import Profile from '../models/Profile';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
