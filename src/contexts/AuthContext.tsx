@@ -1,7 +1,7 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { createUser } from '@/lib/mongodb/services/userService';
 
 export type UserRole = 'student' | 'clubRepresentative' | 'admin';
 
@@ -50,7 +50,52 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [session, setSession] = useState<{ access_token: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Set up auth state listener
+  const register = async (name: string, email: string, password: string, role: UserRole) => {
+    setIsLoading(true);
+    try {
+      // Register with Supabase
+      const { data, error: supabaseError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role: role
+          }
+        }
+      });
+
+      if (supabaseError) throw supabaseError;
+
+      if (!data.user) {
+        throw new Error('Registration failed: No user data returned');
+      }
+
+      // Create user in MongoDB
+      const mongoUser = await createUser({
+        email: data.user.email || '',
+        role,
+        supabaseId: data.user.id,
+        name
+      });
+
+      toast({
+        title: "Registration successful",
+        description: "Welcome to Cluby! Your account has been created."
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, supabaseSession) => {
@@ -181,7 +226,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     };
   }, []);
 
-  // Refresh user data
   const refreshUser = async () => {
     if (!session?.access_token) return;
     
@@ -231,7 +275,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }
   };
 
-  // Login function
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -259,7 +302,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }
   };
 
-  // Logout function
   const logout = async () => {
     try {
       setIsLoading(true);
@@ -278,73 +320,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         variant: "destructive",
       });
       console.error("Logout error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Register function
-  const register = async (name: string, email: string, password: string, role: UserRole) => {
-    setIsLoading(true);
-    try {
-      // Register user with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            role: role
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      if (!data.user) {
-        throw new Error('Registration failed: No user data returned');
-      }
-      
-      // Create or update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          full_name: name,
-          username: email.split('@')[0]
-        });
-        
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-      }
-      
-      // If registering as club representative, create a pending club
-      if (role === 'clubRepresentative') {
-        const { error: clubError } = await supabase
-          .from('clubs')
-          .insert({
-            name: 'New Club (Please Update)',
-            representative_id: data.user.id,
-            status: 'pending'
-          });
-          
-        if (clubError) {
-          console.error('Error creating club:', clubError);
-        }
-      }
-      
-      toast({
-        title: "Registration successful",
-        description: "Welcome to Cluby! Your account has been created.",
-      });
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-      throw error;
     } finally {
       setIsLoading(false);
     }
