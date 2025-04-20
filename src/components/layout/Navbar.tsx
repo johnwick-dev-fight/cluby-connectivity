@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ThemeSwitcher from '@/components/ThemeSwitcher';
@@ -21,32 +21,25 @@ const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="border-b bg-white dark:bg-gray-900 dark:border-gray-800">
+    <nav className="border-b bg-background">
       <div className="cluby-container flex justify-between items-center py-3">
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-2xl font-bold text-cluby-600 dark:text-cluby-400">
+          <Link to="/" className="text-2xl font-bold text-primary">
             Cluby
           </Link>
           
           <div className="hidden md:flex relative w-96 max-w-sm">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
             <Input 
               type="search" 
               placeholder="Search clubs, events..." 
-              className="pl-8 w-full dark:bg-gray-800 dark:border-gray-700"
+              className="pl-8 w-full"
             />
           </div>
         </div>
         
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
-          
-          <Button variant="ghost" size="icon" className="relative text-gray-700 dark:text-gray-200">
-            <Bell size={20} />
-            <span className="absolute -top-1 -right-1 bg-cluby-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              3
-            </span>
-          </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
