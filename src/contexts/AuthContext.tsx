@@ -1,5 +1,7 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'student' | 'clubRepresentative' | 'admin';
 
@@ -17,7 +19,7 @@ export interface User {
   id: string;
   email: string;
   role: UserRole;
-  club_id?: string; // Added this property for club representatives
+  club_id?: string;
   profile?: Profile;
 }
 
@@ -43,73 +45,6 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-// Mock users for client-side authentication demo
-// In a real app, these would be stored in a database
-const MOCK_USERS = [
-  {
-    id: '1',
-    email: 'student1@gmail.com',
-    password: 'password123',
-    role: 'student' as UserRole,
-    profile: {
-      id: '1',
-      full_name: 'Student User',
-      avatar_url: '/avatar-placeholder.jpg',
-      department: 'Computer Science',
-      year: '2nd Year'
-    }
-  },
-  {
-    id: '2',
-    email: 'club_rep@gmail.com',
-    password: 'password123',
-    role: 'clubRepresentative' as UserRole,
-    club_id: '1', // Added club_id for club representative
-    profile: {
-      id: '2',
-      full_name: 'Club Representative',
-      avatar_url: '/avatar-placeholder.jpg'
-    }
-  },
-  {
-    id: '3',
-    email: 'admin@cluby.com',
-    password: 'password123',
-    role: 'admin' as UserRole,
-    profile: {
-      id: '3',
-      full_name: 'Admin User',
-      avatar_url: '/avatar-placeholder.jpg'
-    }
-  }
-];
-
-// Simulate JWT creation without actually using JWT
-const generateMockToken = (user: any) => {
-  return btoa(JSON.stringify({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    exp: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
-  }));
-};
-
-// Simulate JWT verification without actually using JWT
-const verifyMockToken = (token: string) => {
-  try {
-    const decoded = JSON.parse(atob(token));
-    
-    // Check if token is expired
-    if (decoded.exp < Date.now()) {
-      return { data: null, error: new Error('Token expired') };
-    }
-    
-    return { data: decoded, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
-};
-
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<{ access_token: string } | null>(null);
@@ -119,47 +54,118 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true);
-      const token = localStorage.getItem('auth_token');
       
-      if (token) {
-        try {
-          const { data, error } = verifyMockToken(token);
-          
-          if (error || !data) {
-            localStorage.removeItem('auth_token');
-            setUser(null);
-            setSession(null);
+      try {
+        // Get current session from Supabase
+        const { data: { session: supabaseSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setUser(null);
+          setSession(null);
+        } else if (supabaseSession) {
+          // Session exists, retrieve user data
+          const { data: userData, error: userError } = await supabase
+            .from('profiles')
+            .select('*, clubs(*)')
+            .eq('id', supabaseSession.user.id)
+            .single();
+            
+          if (userError) {
+            console.error('Error fetching user profile:', userError);
           } else {
-            // Token is valid, set up user data
-            const userData = data as any;
+            // Determine user role
+            let role: UserRole = 'student';
+            let club_id: string | undefined = undefined;
             
-            // Find the user in our mock database
-            const mockUser = MOCK_USERS.find(u => u.id === userData.id) || MOCK_USERS.find(u => u.email === userData.email);
-            
-            if (mockUser) {
-              setUser({
-                id: mockUser.id,
-                email: mockUser.email,
-                role: mockUser.role,
-                club_id: mockUser.club_id,
-                profile: mockUser.profile
-              });
+            // Check if user is a club representative
+            const { data: clubRep } = await supabase
+              .from('clubs')
+              .select('id')
+              .eq('representative_id', supabaseSession.user.id)
+              .single();
               
-              setSession({ access_token: token });
+            if (clubRep) {
+              role = 'clubRepresentative';
+              club_id = clubRep.id;
             } else {
-              localStorage.removeItem('auth_token');
+              // Check if user is an admin (this could be a separate table or column)
+              // For this example, we'll check email domains
+              if (supabaseSession.user.email?.endsWith('@cluby.com')) {
+                role = 'admin';
+              }
             }
+            
+            setUser({
+              id: supabaseSession.user.id,
+              email: supabaseSession.user.email || '',
+              role,
+              club_id,
+              profile: userData as Profile
+            });
+            
+            setSession({ access_token: supabaseSession.access_token });
           }
-        } catch (error) {
-          console.error('Error verifying token:', error);
-          localStorage.removeItem('auth_token');
         }
+      } catch (error) {
+        console.error('Authentication check error:', error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     checkAuth();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, supabaseSession) => {
+        if (event === 'SIGNED_IN' && supabaseSession) {
+          // Similar logic to above for setting user data
+          try {
+            const { data: userData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', supabaseSession.user.id)
+              .single();
+              
+            let role: UserRole = 'student';
+            let club_id: string | undefined = undefined;
+            
+            const { data: clubRep } = await supabase
+              .from('clubs')
+              .select('id')
+              .eq('representative_id', supabaseSession.user.id)
+              .single();
+              
+            if (clubRep) {
+              role = 'clubRepresentative';
+              club_id = clubRep.id;
+            } else if (supabaseSession.user.email?.endsWith('@cluby.com')) {
+              role = 'admin';
+            }
+            
+            setUser({
+              id: supabaseSession.user.id,
+              email: supabaseSession.user.email || '',
+              role,
+              club_id,
+              profile: userData as Profile
+            });
+            
+            setSession({ access_token: supabaseSession.access_token });
+          } catch (error) {
+            console.error('Error updating user on auth change:', error);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setSession(null);
+        }
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Refresh user data
@@ -167,22 +173,38 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     if (!session?.access_token) return;
     
     try {
-      const { data } = verifyMockToken(session.access_token);
-      if (data) {
-        const userData = data as any;
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser(session.access_token);
+      
+      if (supabaseUser) {
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+          
+        let role: UserRole = 'student';
+        let club_id: string | undefined = undefined;
         
-        // Find the user in our mock database
-        const mockUser = MOCK_USERS.find(u => u.id === userData.id);
-        
-        if (mockUser) {
-          setUser({
-            id: mockUser.id,
-            email: mockUser.email,
-            role: mockUser.role,
-            club_id: mockUser.club_id, // Include club_id
-            profile: mockUser.profile
-          });
+        const { data: clubRep } = await supabase
+          .from('clubs')
+          .select('id')
+          .eq('representative_id', supabaseUser.id)
+          .single();
+          
+        if (clubRep) {
+          role = 'clubRepresentative';
+          club_id = clubRep.id;
+        } else if (supabaseUser.email?.endsWith('@cluby.com')) {
+          role = 'admin';
         }
+        
+        setUser({
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          role,
+          club_id,
+          profile: userData as Profile
+        });
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
@@ -193,35 +215,16 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate network request delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Find the user in our mock database
-      const user = MOCK_USERS.find(u => u.email === email);
-      
-      if (!user || user.password !== password) {
-        throw new Error('Invalid email or password');
-      }
-      
-      // Generate a mock token
-      const token = generateMockToken(user);
-      
-      // Store the token
-      localStorage.setItem('auth_token', token);
-      
-      setUser({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        club_id: user.club_id, // Include club_id when setting user
-        profile: user.profile
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
       
-      setSession({ access_token: token });
+      if (error) throw error;
       
       toast({
         title: "Login successful",
-        description: `Welcome back${user.profile?.full_name ? ', ' + user.profile.full_name : ''}!`,
+        description: `Welcome back!`,
       });
     } catch (error: any) {
       console.error("Login exception:", error);
@@ -239,12 +242,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // Logout function
   const logout = async () => {
     try {
-      // Simulate network request delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const { error } = await supabase.auth.signOut();
       
-      localStorage.removeItem('auth_token');
-      setUser(null);
-      setSession(null);
+      if (error) throw error;
       
       toast({
         title: "Logged out",
@@ -260,58 +260,59 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }
   };
 
-  // Register function (simplified for client-side demo)
+  // Register function
   const register = async (name: string, email: string, password: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      // Simulate network request delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Check if user already exists
-      if (MOCK_USERS.find(u => u.email === email)) {
-        throw new Error('User with this email already exists');
-      }
-      
-      // In a real app, we would call the API to create a user
-      // For this demo, we'll simulate a successful registration
-      
-      // Create a new mock user
-      const newUserId = String(MOCK_USERS.length + 1);
-      const newUser = {
-        id: newUserId,
+      // Register user with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        role,
-        profile: {
-          id: newUserId,
-          full_name: name,
-          avatar_url: '/avatar-placeholder.jpg'
+        options: {
+          data: {
+            full_name: name
+          }
         }
-      };
+      });
       
-      // Add to our mock database (this is just for demo)
-      // In a real app, the user would be created in a database
-      MOCK_USERS.push(newUser);
+      if (error) throw error;
       
-      // Generate a token for the new user
-      const token = generateMockToken(newUser);
+      if (!data.user) {
+        throw new Error('Registration failed: No user data returned');
+      }
+      
+      // Create or update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          full_name: name,
+          username: email.split('@')[0]
+        });
+        
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+      }
+      
+      // If registering as club representative, create a pending club
+      if (role === 'clubRepresentative') {
+        const { error: clubError } = await supabase
+          .from('clubs')
+          .insert({
+            name: 'New Club (Please Update)',
+            representative_id: data.user.id,
+            status: 'pending'
+          });
+          
+        if (clubError) {
+          console.error('Error creating club:', clubError);
+        }
+      }
       
       toast({
         title: "Registration successful",
         description: "Welcome to Cluby! Your account has been created.",
       });
-      
-      // Store the token
-      localStorage.setItem('auth_token', token);
-      
-      setUser({
-        id: newUser.id,
-        email: newUser.email,
-        role: newUser.role,
-        profile: newUser.profile
-      });
-      
-      setSession({ access_token: token });
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({

@@ -7,10 +7,10 @@ const isBrowser = typeof window !== 'undefined';
 
 // MongoDB connection configuration
 export const DB_CONFIG = {
-  username: 'avneesh-singh',
+  username: process.env.MONGODB_USERNAME || 'avneesh-singh',
   password: isBrowser ? '' : (process.env.MONGODB_PASSWORD || '15q3RIL4Qwq3LKnf'),
-  cluster: 'cluby-cluster.a6odmyp.mongodb.net',
-  dbName: 'cluby-db',
+  cluster: process.env.MONGODB_CLUSTER || 'cluby-cluster.a6odmyp.mongodb.net',
+  dbName: process.env.MONGODB_DBNAME || 'cluby-db',
   // Connection string format
   get uri(): string {
     if (isBrowser) {
