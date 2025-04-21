@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface UserDocument extends Document {
   email: string;
-  password: string; // Note: This should be hashed
+  supabaseId: string;
   role: 'student' | 'clubRepresentative' | 'admin';
   created_at: Date;
   updated_at: Date;
@@ -11,7 +11,7 @@ export interface UserDocument extends Document {
 
 const UserSchema = new Schema({
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  supabaseId: { type: String, required: true, unique: true },
   role: { 
     type: String, 
     enum: ['student', 'clubRepresentative', 'admin'], 
@@ -21,5 +21,21 @@ const UserSchema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Check if model already exists (for development with hot reloading)
-export default mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema);
+// Safe model initialization that handles both browser and server environments
+let User: mongoose.Model<UserDocument>;
+
+// Only create/access model on server side
+if (typeof window === 'undefined') {
+  try {
+    // Try to get existing model
+    User = mongoose.model<UserDocument>('User');
+  } catch {
+    // Create new model if it doesn't exist
+    User = mongoose.model<UserDocument>('User', UserSchema);
+  }
+} else {
+  // In browser, provide a placeholder
+  User = {} as mongoose.Model<UserDocument>;
+}
+
+export default User;

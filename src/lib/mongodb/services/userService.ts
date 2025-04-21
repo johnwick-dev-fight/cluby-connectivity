@@ -11,6 +11,12 @@ export interface CreateUserData {
 }
 
 export async function createUser(userData: CreateUserData) {
+  // Check if we're in a browser environment
+  if (typeof window !== 'undefined') {
+    console.error('User creation should only be performed server-side');
+    throw new Error('Cannot create user in browser environment');
+  }
+
   try {
     // Start a mongoose session for transaction
     const session = await mongoose.startSession();
