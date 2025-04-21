@@ -1,11 +1,16 @@
 
 import dbConnect from '../db';
-import { supabase } from '@/integrations/supabase/client';
-import jwt from 'jsonwebtoken';
+import User from '../models/User';
+import Profile from '../models/Profile';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 // Safe check for browser environment
 const isBrowser = typeof window !== 'undefined';
+
+// Secret key for JWT signing - in production, use environment variables
+const JWT_SECRET = 'cluby-secure-jwt-secret';
 
 export interface UserCredentials {
   email: string;
@@ -27,62 +32,20 @@ export interface RegistrationData {
   role: 'student' | 'clubRepresentative' | 'admin';
 }
 
-// Hybrid approach - using Supabase for auth but MongoDB for user data
 export async function registerUser(userData: RegistrationData): Promise<AuthResponse> {
   if (isBrowser) {
-    // Use Supabase client for browser
     try {
-      // Register with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            full_name: userData.name,
-            role: userData.role
-          }
-        }
+      // Client-side API call to server-side registration endpoint
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
       });
       
-      if (error) throw error;
-      
-      // Create profile in Supabase
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            full_name: userData.name,
-            username: userData.email.split('@')[0]
-          });
-          
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-        }
-        
-        // If registering as club representative, create a pending club
-        if (userData.role === 'clubRepresentative') {
-          const { error: clubError } = await supabase
-            .from('clubs')
-            .insert({
-              name: 'New Club (Please Update)',
-              representative_id: data.user.id,
-              status: 'pending'
-            });
-            
-          if (clubError) {
-            console.error('Error creating club:', clubError);
-          }
-        }
-      }
-      
-      return {
-        success: true,
-        message: 'User registered successfully',
-        user: data.user
-      };
+      const data = await response.json();
+      return data;
     } catch (error: any) {
-      console.error('Supabase registration error:', error);
+      console.error('Registration error:', error);
       return {
         success: false,
         message: error.message || 'Registration failed',
@@ -90,58 +53,200 @@ export async function registerUser(userData: RegistrationData): Promise<AuthResp
       };
     }
   } else {
-    // Server-side logic would use MongoDB directly
-    // This won't be called from the browser
-    return {
-      success: false,
-      message: 'Server-side registration is not implemented in this version',
-    };
+    // Server-side registration logic
+    try {
+      await dbConnect();
+      
+      // Check if user already exists
+      const existingUser = await User.findOne({ email: userData.email });
+      if (existingUser) {
+        return {
+          success: false,
+          message: 'User with this email already exists'
+        };
+      }
+      
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(userData.password, salt);
+      
+      // Start a mongoose session for transaction
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      
+      try {
+        // Create user
+        const user = await User.create([{
+          email: userData.email,
+          password: hashedPassword,
+          role: userData.role
+        }], { session });
+        
+        // Create profile
+        await Profile.create([{
+          user_id: user[0]._id,
+          full_name: userData.name,
+          username: userData.email.split('@')[0]
+        }], { session });
+        
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
+        
+        // Generate JWT token
+        const token = jwt.sign(
+          { id: user[0]._id, email: user[0].email, role: user[0].role },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+        
+        return {
+          success: true,
+          message: 'User registered successfully',
+          user: {
+            id: user[0]._id,
+            email: user[0].email,
+            role: user[0].role
+          },
+          token
+        };
+      } catch (error) {
+        // Rollback transaction on error
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('Server registration error:', error);
+      return {
+        success: false,
+        message: error.message || 'Registration failed',
+        error
+      };
+    }
   }
 }
 
 export async function loginUser(credentials: UserCredentials): Promise<AuthResponse> {
   if (isBrowser) {
-    // Use Supabase client for browser
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password
+      // Client-side API call to server-side login endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
       });
       
-      if (error) throw error;
+      const data = await response.json();
       
-      return {
-        success: true,
-        message: 'Login successful',
-        user: data.user,
-        token: data.session?.access_token
-      };
+      // Store token in localStorage if login successful
+      if (data.success && data.token) {
+        localStorage.setItem('cluby_auth_token', data.token);
+      }
+      
+      return data;
     } catch (error: any) {
-      console.error('Supabase login error:', error);
+      console.error('Login error:', error);
       return {
         success: false,
-        message: error.message || 'Invalid credentials',
+        message: error.message || 'Login failed',
         error
       };
     }
   } else {
-    // Server-side logic would use MongoDB directly
-    // This won't be called from the browser
-    return {
-      success: false,
-      message: 'Server-side login is not implemented in this version',
-    };
+    // Server-side login logic
+    try {
+      await dbConnect();
+      
+      // Find user by email
+      const user = await User.findOne({ email: credentials.email });
+      if (!user) {
+        return {
+          success: false,
+          message: 'Invalid credentials'
+        };
+      }
+      
+      // Verify password
+      const isMatch = await bcrypt.compare(credentials.password, user.password);
+      if (!isMatch) {
+        return {
+          success: false,
+          message: 'Invalid credentials'
+        };
+      }
+      
+      // Find user profile
+      const profile = await Profile.findOne({ user_id: user._id });
+      
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user._id, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      
+      return {
+        success: true,
+        message: 'Login successful',
+        user: {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          profile
+        },
+        token
+      };
+    } catch (error: any) {
+      console.error('Server login error:', error);
+      return {
+        success: false,
+        message: error.message || 'Login failed',
+        error
+      };
+    }
   }
 }
 
 export async function getUserByToken(token: string): Promise<AuthResponse> {
   if (isBrowser) {
-    // Use Supabase client for browser
     try {
-      const { data: { user }, error } = await supabase.auth.getUser(token);
+      // Client-side API call to server-side verify token endpoint
+      const response = await fetch('/api/auth/verify', {
+        method: 'GET',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
-      if (error) throw error;
+      const data = await response.json();
+      return data;
+    } catch (error: any) {
+      console.error('Token verification error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to verify token',
+        error
+      };
+    }
+  } else {
+    // Server-side token verification logic
+    try {
+      if (!token) {
+        return {
+          success: false,
+          message: 'No token provided'
+        };
+      }
       
+      // Verify token
+      const decoded: any = jwt.verify(token, JWT_SECRET);
+      
+      await dbConnect();
+      
+      // Find user by id
+      const user = await User.findById(decoded.id);
       if (!user) {
         return {
           success: false,
@@ -149,41 +254,43 @@ export async function getUserByToken(token: string): Promise<AuthResponse> {
         };
       }
       
-      // Get user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-        
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError);
-      }
+      // Find user profile
+      const profile = await Profile.findOne({ user_id: user._id });
       
       return {
         success: true,
-        message: 'User retrieved successfully',
+        message: 'Token verified successfully',
         user: {
-          id: user.id,
+          id: user._id,
           email: user.email,
-          role: user.user_metadata?.role || 'student',
+          role: user.role,
           profile
         }
       };
     } catch (error: any) {
-      console.error('Supabase get user error:', error);
+      console.error('Server token verification error:', error);
       return {
         success: false,
-        message: error.message || 'Failed to get user',
+        message: error.message || 'Invalid token',
         error
       };
     }
-  } else {
-    // Server-side logic would use MongoDB directly
-    // This won't be called from the browser
+  }
+}
+
+export async function logoutUser(): Promise<AuthResponse> {
+  if (isBrowser) {
+    // Remove token from localStorage
+    localStorage.removeItem('cluby_auth_token');
+    
     return {
-      success: false,
-      message: 'Server-side user retrieval is not implemented in this version',
+      success: true,
+      message: 'Logged out successfully'
+    };
+  } else {
+    return {
+      success: true,
+      message: 'Logged out successfully'
     };
   }
 }

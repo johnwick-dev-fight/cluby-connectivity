@@ -1,4 +1,5 @@
 
+import dbConnect from '../db';
 import User from '../models/User';
 import Profile from '../models/Profile';
 import mongoose from 'mongoose';
@@ -6,7 +7,7 @@ import mongoose from 'mongoose';
 export interface CreateUserData {
   email: string;
   role: 'student' | 'clubRepresentative' | 'admin';
-  supabaseId: string;
+  password: string;
   name: string;
 }
 
@@ -18,6 +19,8 @@ export async function createUser(userData: CreateUserData) {
   }
 
   try {
+    await dbConnect();
+    
     // Start a mongoose session for transaction
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -26,8 +29,8 @@ export async function createUser(userData: CreateUserData) {
       // Create user
       const user = await User.create([{
         email: userData.email,
-        role: userData.role,
-        supabaseId: userData.supabaseId
+        password: userData.password, // Note: Password should already be hashed
+        role: userData.role
       }], { session });
 
       // Create profile
@@ -50,6 +53,52 @@ export async function createUser(userData: CreateUserData) {
     }
   } catch (error) {
     console.error('Error creating user in MongoDB:', error);
+    throw error;
+  }
+}
+
+export async function getUserById(userId: string) {
+  try {
+    await dbConnect();
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return null;
+    }
+    
+    const profile = await Profile.findOne({ user_id: user._id });
+    
+    return {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      profile
+    };
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
+    throw error;
+  }
+}
+
+export async function getUserByEmail(email: string) {
+  try {
+    await dbConnect();
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      return null;
+    }
+    
+    const profile = await Profile.findOne({ user_id: user._id });
+    
+    return {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      profile
+    };
+  } catch (error) {
+    console.error('Error fetching user by email:', error);
     throw error;
   }
 }

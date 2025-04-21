@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface UserDocument extends Document {
   email: string;
-  supabaseId: string;
+  password: string; // This will be hashed
   role: 'student' | 'clubRepresentative' | 'admin';
   created_at: Date;
   updated_at: Date;
@@ -11,7 +11,7 @@ export interface UserDocument extends Document {
 
 const UserSchema = new Schema({
   email: { type: String, required: true, unique: true },
-  supabaseId: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
   role: { 
     type: String, 
     enum: ['student', 'clubRepresentative', 'admin'], 
